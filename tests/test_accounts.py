@@ -14,7 +14,8 @@ from app import auth, config, db, main, pipeline
 
 SAMPLE = "01_happy_path_clean_exact.pdf"
 UNKNOWN_VENDOR = "11_unapproved_vendor.pdf"
-PUBLIC = {"/", "/api/login", "/api/signup", "/api/logout", "/api/me"}  # /api/me does its own check
+PUBLIC = {"/", "/api/login", "/api/signup", "/api/logout", "/api/me",  # /api/me does its own check
+          "/api/auth/google", "/api/auth/google/callback"}               # signing in with Google happens before there's a session
 
 
 @pytest.fixture(autouse=True)

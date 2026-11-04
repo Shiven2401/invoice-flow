@@ -52,6 +52,11 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()     # console only; the log f
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0") == "1"  # set to 1 when served over HTTPS
 ALLOW_SIGNUP = os.getenv("ALLOW_SIGNUP", "1") == "1"    # 0 once everyone who should have an account has one
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
+# "Continue with Google" on the sign-in page, shown once all three are set (a Google Cloud OAuth client, type Web application,
+# whose authorised redirect URI is GOOGLE_REDIRECT_URI, e.g. https://your-site/api/auth/google/callback)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "25"))              # one upload request, however many files
 # 0 means no limit, the default. Set them when other people share the server: its one worker is shared, so an account
 # could otherwise queue enough to make everyone else wait, and each document takes disk space
