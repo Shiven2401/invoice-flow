@@ -21,7 +21,7 @@ from loguru import logger
 
 from . import config, db
 
-COOKIE = "invoice_flow_session"
+COOKIE = config.SESSION_COOKIE
 USERNAME_RE = re.compile(r"[A-Za-z0-9._@+-]{3,64}")
 SCRYPT = dict(n=2 ** 14, r=8, p=1, maxmem=64 * 1024 * 1024)
 
@@ -124,7 +124,9 @@ def login(request: Request, response: Response, body: dict = Body(...)):
 GOOGLE_PREFIX = "sso$google$"   # stored instead of a password hash: the account can only sign in with Google
 GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
-STATE_COOKIE = "invoice_flow_google_state"
+# the sign-in's state rides in the session cookie itself ("gstate:..."), which no session matches, so it also works behind
+# Firebase Hosting, which passes on only one cookie. Starting a Google sign-in therefore ends any current session.
+STATE_PREFIX = "gstate:"
 
 
 def google_enabled():
@@ -133,7 +135,7 @@ def google_enabled():
 
 def _back_with_error(message):
     response = RedirectResponse("/?google_error=" + urllib.parse.quote(message[:200]), status_code=303)
-    response.delete_cookie(STATE_COOKIE, path="/api/auth/google")
+    response.delete_cookie(COOKIE, path="/")
     return response
 
 
@@ -150,7 +152,7 @@ def google_start(request: Request):
     response = RedirectResponse(f"{GOOGLE_AUTH}?{query}", status_code=303)
     # the state comes back on Google's redirect (a top-level GET, so a SameSite=Lax cookie is sent): it ties the answer to
     # this browser, so nobody can sign a visitor into the wrong account with a link of their own
-    response.set_cookie(STATE_COOKIE, state, max_age=600, httponly=True, samesite="lax", secure=config.COOKIE_SECURE, path="/api/auth/google")
+    response.set_cookie(COOKIE, STATE_PREFIX + state, max_age=600, httponly=True, samesite="lax", secure=config.COOKIE_SECURE, path="/")
     return response
 
 
@@ -158,7 +160,8 @@ def google_start(request: Request):
 def google_callback(request: Request, code: str = "", state: str = "", error: str = ""):
     if not google_enabled():
         raise HTTPException(404, "Google sign-in isn't set up here.")
-    expected = request.cookies.get(STATE_COOKIE) or ""
+    cookie = request.cookies.get(COOKIE) or ""
+    expected = cookie[len(STATE_PREFIX):] if cookie.startswith(STATE_PREFIX) else ""
     if error:
         return _back_with_error("Google sign-in was cancelled." if error == "access_denied" else f"Google sign-in failed ({error}).")
     if not code or not expected or not hmac.compare_digest(state, expected):
@@ -196,8 +199,7 @@ def google_callback(request: Request, code: str = "", state: str = "", error: st
         # email as a username first and then read whatever that person uploads
         return _back_with_error(f"An account called {email} already exists with a password. Log in with its password instead.")
     response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(STATE_COOKIE, path="/api/auth/google")
-    _start_session(response, user["id"])
+    _start_session(response, user["id"])  # replaces the state in the same cookie with the session
     return response
 
 

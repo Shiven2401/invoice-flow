@@ -69,7 +69,7 @@ def test_start_redirects_to_google_with_state():
     q = urllib.parse.parse_qs(url.query)
     assert url.netloc == "accounts.google.com"
     assert q["client_id"] == [config.GOOGLE_CLIENT_ID] and q["redirect_uri"] == [REDIRECT] and q["scope"] == ["openid email profile"]
-    assert r.cookies.get(auth.STATE_COOKIE) == q["state"][0]
+    assert r.cookies.get(auth.COOKIE) == auth.STATE_PREFIX + q["state"][0]  # in the one session cookie (Firebase passes only one)
 
 
 def test_first_sign_in_creates_an_account_and_logs_in(monkeypatch):
