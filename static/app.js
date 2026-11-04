@@ -933,6 +933,7 @@ function renderEmpty() {
     <h1>New document</h1>
     <p class="lede">Add an invoice or bill. You'll watch it being read, check what was found, then get a decision.</p>
     <label class="drop" for="file" tabindex="0"><strong>Choose files or drop them here</strong><span>PDFs or photos: one, several, a whole folder, or a ZIP</span></label>
+    <div class="drop-folder"><button class="btn" type="button" data-pick-folder>${FOLDER_ICON}<span>Or choose a whole folder</span></button></div>
     <div class="demo-only demo-samples">
       <p>This demo replays recorded results, so it can't read a new document. Pick a sample to watch it go through every step. Each builds on the last, so run them in order for the full story.</p>
       <button class="btn primary" type="button" data-run-all>Run all in order</button>
@@ -1418,11 +1419,14 @@ async function init() {
   // the drop zone and the progress bar are redrawn with each page, so their events are caught on the page around them
   const input = $("#file"), stage = $("#run"), dropZone = ev => ev.target.closest && ev.target.closest(".drop");
   input.addEventListener("change", () => { if (input.files.length) uploadFiles(input.files); input.value = ""; });
+  const folderInput = $("#folder");   // the folder picker: every PDF and photo in the chosen folder (and its subfolders), as one batch
+  folderInput.addEventListener("change", () => { if (folderInput.files.length) uploadFiles(folderInput.files); folderInput.value = ""; });
   stage.addEventListener("keydown", ev => { if (dropZone(ev) && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); input.click(); } });
   ["dragenter", "dragover"].forEach(n => stage.addEventListener(n, ev => { const d = dropZone(ev); if (d) { ev.preventDefault(); d.classList.add("over"); } }));
   ["dragleave", "drop"].forEach(n => stage.addEventListener(n, ev => { const d = dropZone(ev); if (d) { ev.preventDefault(); d.classList.remove("over"); } }));
   stage.addEventListener("drop", async ev => { if (dropZone(ev)) { const files = await droppedFiles(ev.dataTransfer); if (files.length) uploadFiles(files); } });
   stage.addEventListener("click", ev => {
+    if (ev.target.closest("[data-pick-folder]")) { folderInput.click(); return; }
     const saveAll = ev.target.closest("[data-batch-folder]");
     if (saveAll) { saveBatchToFolder(saveAll.dataset.batchFolder); return; }
     const waiting = ev.target.closest("[data-run]");

@@ -506,9 +506,9 @@ def test_the_gemini_daily_limit_falls_back_to_the_rules(monkeypatch):
     assert extract.extract_fields(dict(doc, notes=[]), "llm")[1]["used"].startswith("llm:")
 
 
-def test_the_sign_in_page_says_when_documents_go_to_a_model(monkeypatch):
+def test_the_sign_in_page_has_no_model_notice(monkeypatch):
     from fastapi.testclient import TestClient
     c = TestClient(main.app)
-    assert "auth-note" not in c.get("/").text  # no key: nothing leaves the server, nothing to say
-    monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")
-    assert "sent to Google Gemini to be read" in c.get("/").text
+    assert "auth-note" not in c.get("/").text
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")  # removed at the owner's request, with a key set too
+    assert "auth-note" not in c.get("/").text and "sent to Google Gemini" not in c.get("/").text

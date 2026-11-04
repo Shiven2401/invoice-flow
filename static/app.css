@@ -752,3 +752,33 @@ table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
 .lightbox-close { position: fixed; top: 14px; right: 18px; z-index: 1; color: #fff; border-color: rgba(255, 255, 255, .45); background: rgba(0, 0, 0, .35); }
 .lightbox-close:hover { background: rgba(255, 255, 255, .15); color: #fff; }
 @media (max-width: 860px) { .filter-bar .f-search { margin-left: 0; } }
+
+/* every screen size: a dashboard column is never wider than the screen (a wide table scrolls inside its card instead),
+   the figure tiles shrink with the page, and they stack on a phone */
+#dash-overview { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 900px) { #dash-analytics, .viz-two, .viz-tiles { grid-template-columns: minmax(0, 1fr); } }
+.tally .v { font-size: clamp(24px, 2.4vw + 10px, 32px); overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .tally { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .tally { grid-template-columns: minmax(0, 1fr); } .tally > div { padding: 16px 18px; } }
+/* the current step's label sits under its number; at either end it lines up with the edge so it stays on screen */
+@media (max-width: 860px) {
+  .stepper li:first-child.current .lbl { left: 0; transform: none; }
+  .stepper li:last-child.current .lbl { left: auto; right: 0; transform: none; }
+}
+
+/* "why invoices stop" on a phone: the label above a full-width bar, the count at the right */
+@media (max-width: 520px) {
+  .rbar { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+  .rbar .t { grid-column: 1 / -1; grid-row: 2; }
+}
+/* small screens hide the folder list with the sidebar; its button stays in the top bar and opens the Folders dialog */
+@media (max-width: 860px) {
+  .side-folders { display: flex; flex-direction: row; margin: 0; }
+  .side-folders .side-label, .side-folders .folders { display: none; }
+  .side-folders .new-folder .fname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* "or choose a whole folder" under the drop zone: the folder picker uploads every PDF and photo in it */
+.drop-folder { display: flex; justify-content: center; margin-top: 10px; }
+.drop-folder .btn { display: inline-flex; align-items: center; gap: 8px; }
+.drop-folder svg { width: 16px; height: 16px; flex: none; }

@@ -919,11 +919,6 @@ def index(google_error: str = ""):
                             f'<p class="auth-error" id="auth-error" role="alert">{escape(google_error[:200])}</p>', 1)
     for name in ("app.css", "app.js", "theme.js"):
         html = html.replace(f"/static/{name}\"", f"/static/{name}?v={int((config.STATIC_DIR / name).stat().st_mtime)}\"")
-    provider = extract.llm_provider()[0]
-    if provider:  # say so before anyone signs up: their documents leave this server
-        who = "Google Gemini" if provider == "Gemini" else "Anthropic's Claude"
-        html = html.replace("are private to your account.</p>", f"are private to your account.</p>\n  <p class=\"auth-note\">Documents you upload are "
-                            f"sent to {who} to be read. Don't upload anything you aren't allowed to share with them.</p>", 1)
     return Response(html, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})
 
 
