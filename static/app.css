@@ -778,6 +778,10 @@ table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
   .side-folders .new-folder .fname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
+/* boxes that show data have square corners (buttons, tabs and pills stay rounded) */
+.tally > div, .dash-grid > section, .table-wrap, .filter-bar, .viz-card, .viz-tile, .rules-col, .rules-more > div,
+.trail, .verdict, .details, .wz-found > div, .drawer-folder, .engine { border-radius: 0; }
+
 /* "or choose a whole folder" under the drop zone: the folder picker uploads every PDF and photo in it */
 .drop-folder { display: flex; justify-content: center; margin-top: 10px; }
 .drop-folder .btn { display: inline-flex; align-items: center; gap: 8px; }
