@@ -1,7 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "echo 'static demo: nothing to install'",
-  "buildCommand": "mkdir -p public && cp invoice-flow-demo.html public/index.html",
-  "outputDirectory": "public"
+  "buildCommand": "mkdir -p public && cp invoice-flow-demo.html public/demo.html",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "memory": 2048,
+      "excludeFiles": "{tests/**,tools/**,runtime/**,.venv/**,invoice-flow-demo.html,public/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/demo", "destination": "/demo.html" },
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
 }
