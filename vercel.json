@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'static demo: nothing to install'",
+  "buildCommand": "mkdir -p public && cp invoice-flow-demo.html public/index.html",
+  "outputDirectory": "public"
+}

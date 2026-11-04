@@ -1,0 +1,23 @@
+# Render blueprint: New > Blueprint in the Render dashboard, pick this repository, and Render creates the service below.
+# One instance with a persistent disk at /data (accounts, invoices, logs). The Standard plan's 2 GB is needed:
+# reading a photo peaks around 570 MB, more than the 512 MB Starter plan has.
+services:
+  - type: web
+    name: invoice-flow
+    runtime: docker
+    plan: standard
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    disk:
+      name: invoice-flow-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: GEMINI_API_KEY        # asked for when the blueprint is created; kept as a secret, never in the repository
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_DAILY_LIMIT    # documents a day read by Gemini on your key; the rest use the built-in reader
+        value: "300"
+      - key: ALLOW_SIGNUP          # anyone can create an account; set to 0 to close sign-up
+        value: "1"
