@@ -11,7 +11,7 @@ import xlsxwriter
 
 from .rules import CODE_LABEL
 
-INK, INK_2, RULE, PEN = "#081C2D", "#4B5B68", "#DCE2E7", "#1F7A63"   # the app's Emerald Green palette: navy text, emerald charts
+INK, INK_2, RULE, PEN = "#0E0A20", "#5D5A6E", "#E4E2EE", "#654CF4"   # the app's palette: ink text, violet charts
 # bar fills are stepped from the app's status colours: its amber and red can't be told apart with red-green colour blindness
 OUTCOMES = [("APPROVE", "Approved", "#1E7A4C", "#DDF0E5"), ("HOLD", "Held", "#C98512", "#FBEBD0"), ("REJECT", "Rejected", "#A61C14", "#F9DEDA")]
 BAD = "#A61C14"
