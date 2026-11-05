@@ -225,7 +225,7 @@ const DETAIL = {
         <i class="this ${cls}" style="left:${p(d.billed_before)};width:${p(d.this_net)}"></i>
         <i class="tol" style="left:${p(d.po_net)};width:${p(d.po_net * d.tolerance_pct / 100)}"></i>
         <span class="po-line" style="left:${p(d.po_net)}"><span>PO value</span></span></div>
-      <div class="legend"><span><b style="background:#C4A8EE"></b>Approved earlier</span><span><b style="background:var(--${cls === "ok" ? "ok" : cls === "warn" ? "warn" : "bad"})"></b>This invoice</span><span><b style="background:repeating-linear-gradient(45deg,#fff 0 2px,#7b8794 2px 3px)"></b>${d.tolerance_pct}% tolerance</span></div>
+      <div class="legend"><span><b style="background:#8AE0CA"></b>Approved earlier</span><span><b style="background:var(--${cls === "ok" ? "ok" : cls === "warn" ? "warn" : "bad"})"></b>This invoice</span><span><b style="background:repeating-linear-gradient(45deg,#fff 0 2px,#7b8794 2px 3px)"></b>${d.tolerance_pct}% tolerance</span></div>
       ${kv([["PO value (pre-tax)", inr(d.po_net)], ["Approved so far", inr(d.billed_before)], ["This invoice (pre-tax)", inr(d.this_net)],
         ["Billed with this invoice", `${inr(d.cumulative)} <span class="muted">(${pct(d.pct_billed)} of the PO)</span>`],
         d.over_amount > 0 ? ["Over the PO", `<b>${inr(d.over_amount)} (${pct(d.over_pct)})</b>`] : ["Still open on the PO", inr(d.remaining_after)],
