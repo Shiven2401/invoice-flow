@@ -860,23 +860,44 @@ body.signed-out { background: radial-gradient(420px 420px at 86% 10%, rgba(101, 
 .auth-submit { width: 100%; padding: 12px 16px; margin-top: 4px; font-size: 15px; }
 .auth .hint a { color: var(--pen); font-weight: 600; }
 
-/* the ☰ button beside the logo shows or hides the Folders section */
+/* the ☰ button, as on YouTube: on a wide screen it switches the sidebar sideways between full (labels, folders) and a narrow
+   rail of icons, so the page gets the width; on a phone it slides the folders in from the left */
 .side-head { display: flex; align-items: center; gap: 8px; padding: 0 0 6px; }
 .side-head .brand { padding: 4px 4px 4px 2px; }
-.menu-btn { display: grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 12px; background: var(--band); color: var(--ink); transition: background .15s, color .15s; }
-.menu-btn svg { width: 20px; height: 20px; }
-.menu-btn:hover, .menu-btn[aria-expanded="true"] { background: var(--pen-wash); color: var(--pen-ink); }
-.side-folders { display: none; }
-body.folders-open .side-folders { display: flex; animation: wz-in .2s ease both; }
-@media (max-width: 860px) {   /* a phone: the folders drop down as a panel under the top bar */
-  .side-head { padding: 0; }
-  body.folders-open .side-folders { position: fixed; left: 0; right: 0; top: 60px; z-index: 25; flex-direction: column; gap: 2px; margin: 0;
-    padding: 12px 12px 16px; background: var(--side); border-bottom: 1px solid var(--rule); box-shadow: 0 18px 40px rgba(14, 10, 32, .35);
-    max-height: calc(100vh - 90px); overflow-y: auto; }
-  body.folders-open .side-folders .side-label { display: block; }
-  body.folders-open .side-folders .folders { display: block; max-height: none; }
+.menu-btn { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--ink); transition: background .15s, color .15s; }
+.menu-btn svg { width: 22px; height: 22px; }
+.menu-btn:hover { background: var(--band); }
+@media (min-width: 861px) {
+  body:not(.signed-out) { transition: grid-template-columns .25s ease; }
+  body.rail:not(.signed-out) { grid-template-columns: 76px minmax(0, 1fr); }
+  body.rail .dock { left: calc(76px + (100vw - 76px) / 2); }
+  body.rail .sidebar { padding: 14px 10px; align-items: center; overflow-x: hidden; }
+  body.rail .side-head { flex-direction: column; gap: 12px; padding: 0 0 10px; }
+  body.rail .side-head .brand { padding: 0; }
+  body.rail :is(.brand-name, .side-label, .folders, .engine, #who-name, .theme-switch span, .new-folder .fname) { display: none; }
+  body.rail .side-folders { margin-top: 4px; align-items: center; }
+  body.rail .new-folder { width: 46px; height: 46px; padding: 0; justify-content: center; }
+  body.rail .new-folder svg { width: 22px; height: 22px; }
+  body.rail .side-foot { align-items: center; }
+  body.rail .theme-switch { grid-template-columns: 1fr; width: 46px; }
+  body.rail .who { flex-direction: column; gap: 8px; padding: 4px; }
 }
-@media (prefers-reduced-motion: reduce) { body.folders-open .side-folders { animation: none; } }
+@media (max-width: 860px) {   /* a phone: the folders slide in from the left over a dimmed page */
+  .side-head { padding: 0; }
+  .sidebar .side-folders { display: flex; position: fixed; top: 0; bottom: 0; left: 0; z-index: 2; width: min(300px, 86vw); flex-direction: column; gap: 2px;
+    margin: 0; padding: 20px 14px; background: var(--side); box-shadow: 10px 0 34px rgba(14, 10, 32, .35); overflow-y: auto;
+    transform: translateX(-105%); visibility: hidden; transition: transform .25s ease, visibility 0s .25s; }
+  .sidebar .side-folders .side-label { display: block; }
+  .sidebar .side-folders .folders { max-height: none; }
+  body.drawer-open .sidebar { z-index: 45; }
+  body.drawer-open .sidebar .side-folders { transform: none; visibility: visible; transition: transform .25s ease; }
+  body.drawer-open::after { content: ""; position: fixed; inset: 0; z-index: 40; background: rgba(14, 10, 32, .45); }
+}
+@media (prefers-reduced-motion: reduce) { body:not(.signed-out), .sidebar .side-folders { transition: none !important; } }
+
+/* the upload uses the width the rail gives back */
+.wizard { max-width: 1400px; }
+.wz-new .drop { max-width: none; min-height: 260px; justify-content: center; padding: 56px 24px; }
 
 /* Analytics in the same colour blocks: held yellow, approved mint, rejected ink; the throughput figures violet, ink, mint */
 .viz-tile { border: 0; }

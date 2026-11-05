@@ -1387,26 +1387,37 @@ function refreshVisible() {
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
 }
 
-/* ---------------------------------------------------------------- folders menu -- */
-/* the ☰ button shows or hides the Folders section: in the sidebar on a wide screen, as a panel under the top bar on a
-   phone. Hidden until asked for; the choice is remembered in this browser. Wired before init's first request, so the
-   button works at once, even while a slow connection is still loading the page */
+/* ------------------------------------------------------------------ sidebar menu -- */
+/* the ☰ button, as on YouTube. On a wide screen it switches the sidebar sideways between full (labels and folders) and a
+   narrow rail of icons, which leaves the page, and the upload, as much width as possible; the rail is where it starts, and
+   the choice is remembered in this browser. On a phone it slides the folders in from the left. Wired before init's first
+   request, so the button works at once, even while a slow connection is still loading the page */
 const narrow = () => matchMedia("(max-width: 860px)").matches;
-function setFolders(open, remember = true) {
-  const menu = $("#menu");
-  document.body.classList.toggle("folders-open", open);
-  menu.setAttribute("aria-expanded", String(open));
-  menu.setAttribute("aria-label", open ? "Hide folders" : "Show folders");
-  if (open && narrow()) $("#side-folders").style.top = `${Math.round($(".sidebar").getBoundingClientRect().bottom)}px`;
-  if (remember) try { localStorage.setItem("invoice-flow-folders", open ? "open" : "closed"); } catch (e) { /* storage blocked */ }
+function syncMenu() {
+  const body = document.body, open = narrow() ? body.classList.contains("drawer-open") : !body.classList.contains("rail");
+  $("#menu").setAttribute("aria-expanded", String(open));
+  $("#menu").setAttribute("aria-label", narrow() ? (open ? "Close folders" : "Open folders") : (open ? "Collapse sidebar" : "Expand sidebar"));
+}
+function setRail(on, remember = true) {
+  document.body.classList.toggle("rail", on);
+  syncMenu();
+  if (remember) try { localStorage.setItem("invoice-flow-sidebar", on ? "rail" : "full"); } catch (e) { /* storage blocked */ }
+}
+function setDrawer(open) {
+  document.body.classList.toggle("drawer-open", open);
+  syncMenu();
 }
 function wireMenu() {
-  $("#menu").addEventListener("click", () => setFolders(!document.body.classList.contains("folders-open")));
-  try { setFolders(localStorage.getItem("invoice-flow-folders") === "open" && !narrow(), false); } catch (e) { setFolders(false, false); }
-  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && narrow() && document.body.classList.contains("folders-open")) setFolders(false, false); });
-  document.addEventListener("click", ev => {     // on a phone, a tap outside the panel closes it
-    if (narrow() && document.body.classList.contains("folders-open") && !ev.target.closest("#side-folders, #menu, .modal")) setFolders(false, false);
+  let saved = null;
+  try { saved = localStorage.getItem("invoice-flow-sidebar"); } catch (e) { /* storage blocked */ }
+  setRail(saved !== "full", false);
+  $("#menu").addEventListener("click", () => narrow() ? setDrawer(!document.body.classList.contains("drawer-open"))
+                                                      : setRail(!document.body.classList.contains("rail")));
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && document.body.classList.contains("drawer-open")) setDrawer(false); });
+  document.addEventListener("click", ev => {     // a tap on the dimmed page closes the drawer
+    if (document.body.classList.contains("drawer-open") && !ev.target.closest("#side-folders, #menu, .modal")) setDrawer(false);
   });
+  matchMedia("(max-width: 860px)").addEventListener("change", () => { setDrawer(false); syncMenu(); });
 }
 
 /* --------------------------------------------------------------------- init -- */
@@ -1430,7 +1441,7 @@ async function init() {
   $("#new-folder").addEventListener("click", () => folderDialog({ title: "Folders", current: S.view.folder, pick: async id => openFolder(id) }));
   $("#folders").addEventListener("click", ev => {
     const open = ev.target.closest("[data-folder-open]"), reset = ev.target.closest("[data-folder-reset]");
-    if (open) { openFolder(+open.dataset.folderOpen); if (narrow()) setFolders(false, false); }   // a phone's panel gets out of the way
+    if (open) { openFolder(+open.dataset.folderOpen); setDrawer(false); }   // a phone's drawer gets out of the way
     else if (reset) resetFolder(reset);
   });
   $("#folder-pick").addEventListener("change", ev => { S.view.folder = ev.target.value ? +ev.target.value : null; renderFolders(); loadDashboard(); });
