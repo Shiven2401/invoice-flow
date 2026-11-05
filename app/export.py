@@ -14,7 +14,7 @@ from .rules import CODE_LABEL
 INK, INK_2, RULE, PEN = "#0E0A20", "#5D5A6E", "#E4E2EE", "#654CF4"   # the app's palette: ink text, violet charts
 # bar fills are stepped from the app's status colours: its amber and red can't be told apart with red-green colour blindness
 OUTCOMES = [("APPROVE", "Approved", "#1E7A4C", "#DDF0E5"), ("HOLD", "Held", "#C98512", "#FBEBD0"), ("REJECT", "Rejected", "#A61C14", "#F9DEDA")]
-BAD = "#A61C14"
+GOOD, AMBER, BAD = "#1E7A4C", "#C98512", "#A61C14"
 INR = '[>=10000000]"₹"##\\,##\\,##\\,##0.00;[>=100000]"₹"##\\,##\\,##0.00;"₹"##,##0.00'
 INR_WHOLE = INR.replace(".00", "")
 BOOK = dict(in_memory=True, strings_to_formulas=False, strings_to_urls=False)
@@ -48,11 +48,17 @@ def _sheet(wb, name, head, columns, rows):
     return ws
 
 
-def _bar(wb, title, sheet, first, last, value_format=None, colors=None, kind="bar", height=CHART_H, longest=None):
+def _bar(wb, title, sheet, first, last, value_format=None, colors=None, kind="bar", height=CHART_H, longest=None, cat_col=0, val_col=1, labels=True):
     """One-series chart: values labelled directly, so the value axis and grid are left out."""
     chart = wb.add_chart({"type": kind})
-    series = dict(categories=[sheet, first, 0, last, 0], values=[sheet, first, 1, last, 1], fill={"color": PEN}, gap=55,
-                  data_labels=dict(value=True, font=dict(color=INK, size=10), **({"num_format": value_format} if value_format else {})))
+    series = dict(categories=[sheet, first, cat_col, last, cat_col], values=[sheet, first, val_col, last, val_col], fill={"color": PEN}, gap=55)
+    if labels:
+        series["data_labels"] = dict(value=True, font=dict(color=INK, size=10), **({"num_format": value_format} if value_format else {}))
+    if kind == "line":
+        series.pop("fill"), series.pop("gap")
+        series.update(line=dict(color=PEN, width=2.25), marker=dict(type="circle", size=6, fill=dict(color=PEN), border=dict(color=PEN)))
+        if labels:
+            series["data_labels"]["position"] = "above"
     if colors:
         series["points"] = [{"fill": {"color": c}} for c in colors]
     chart.add_series(series)
@@ -71,6 +77,154 @@ def _bar(wb, title, sheet, first, last, value_format=None, colors=None, kind="ba
     chart.set_chartarea(dict(border=dict(color=RULE)))
     chart.set_size(dict(width=CHART_W, height=height))
     return chart
+
+
+FLAG_ACTION = {"call": ("Call the vendor", "Possible fraud: an identity, PO or amount that doesn't fit what you have on record.", BAD),
+               "resend": ("Ask for a resend", "Document problems: a GSTIN or GST shown wrongly, sums that don't add up, details missing.", AMBER)}
+
+
+def _months(spend):
+    """Approved value per month, with the empty months inside the range shown as zero, as on the Analytics tab."""
+    sums = {}
+    for day, value in spend:
+        sums[day[:7]] = sums.get(day[:7], 0) + value
+    if not sums:
+        return []
+    keys, (y, m) = [], map(int, min(sums).split("-"))
+    while f"{y}-{m:02d}" <= max(sums) and len(keys) < 800:
+        keys.append(f"{y}-{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return [(datetime.strptime(k, "%Y-%m").strftime("%b %Y"), round(sums.get(k, 0), 2)) for k in keys]
+
+
+def _analytics_sheet(wb, a, head, money, scope):
+    """Everything on the Analytics tab, as tables with a native chart beside each one."""
+    ws = wb.add_worksheet("Analytics")
+    ws.hide_gridlines(2)
+    ws.set_column(0, 0, 2)
+    ws.set_column(1, 1, 34)
+    ws.set_column(2, 6, 15)
+    ws.set_column(7, 7, 3)
+    title = wb.add_format(dict(font_size=20, bold=True, font_color=INK))
+    h2 = wb.add_format(dict(font_size=13, bold=True, font_color=INK, bottom=2, bottom_color=PEN))
+    muted = wb.add_format(dict(font_color=INK_2))
+    wrap = wb.add_format(dict(text_wrap=True, valign="top"))
+    stamp = wb.add_format(dict(num_format="dd-mmm-yyyy hh:mm"))
+    pct = wb.add_format(dict(num_format="0%"))
+    secs = wb.add_format(dict(num_format='0.0"s"'))
+    big = wb.add_format(dict(font_size=16, bold=True, font_color=INK, align="left"))
+    big_money = wb.add_format(dict(font_size=16, bold=True, font_color=INK, align="left", num_format=INR_WHOLE))
+    small = wb.add_format(dict(font_color=INK_2, text_wrap=True, valign="top", top=2, top_color=INK))
+    ws.set_row(1, 30)
+    ws.write_string(1, 1, "Analytics", title)
+    ws.write_string(2, 1, f"The same figures as the Analytics tab of the Dashboard. {scope}Rejected invoices count here.", muted)
+    at = [4]   # the next free row
+
+    def section(name, sub=""):
+        ws.merge_range(at[0], 1, at[0], 6, name, h2)
+        at[0] += 1
+        if sub:
+            ws.merge_range(at[0], 1, at[0], 6, sub, muted)
+            at[0] += 1
+        return at[0]
+
+    def table(heads, rows, fmts):
+        for c, text in enumerate(heads):
+            ws.write_string(at[0], 1 + c, text, head)
+        first = at[0] + 1
+        for r in rows:
+            at[0] += 1
+            for c, value in enumerate(r):
+                _put(ws, at[0], 1 + c, value, fmts[c])
+        if not rows:
+            at[0] += 1
+            ws.write_string(at[0], 1, "None.", muted)
+        last = at[0]
+        at[0] += 2
+        return first, last
+
+    def chart(top, c):
+        ws.insert_chart(top, 8, c, dict(object_position=3))
+        at[0] = max(at[0], top + 18)   # a chart is about 16 rows tall: never let the next one overlap it
+
+    # 1. outcomes, and the money on hold by how long it has waited
+    o = a["outcome"]
+    top = section("Outcomes and money on hold", "What needs a person now: invoices and value by outcome.")
+    tiles = [("HOLD", "Held", "waiting for you"), ("APPROVE", "Approved", "for payment"), ("REJECT", "Rejected", "")]
+    ws.set_row(at[0], 26)
+    for i, (k, name, note) in enumerate(tiles):
+        ws.merge_range(at[0], 1 + i * 2, at[0], 2 + i * 2, o[k]["value"], big_money)
+        ws.merge_range(at[0] + 1, 1 + i * 2, at[0] + 1, 2 + i * 2, f"{name}: {o[k]['count']} invoice{'' if o[k]['count'] == 1 else 's'}" + (f" · {note}" if note else ""), small)
+    at[0] += 3
+    first, last = table(["Outcome", "Invoices", "Value"], [(name, o[k]["count"], o[k]["value"]) for k, name, _n in tiles], [None, None, money])
+    if any(o[k]["value"] for k, *_ in tiles):
+        chart(top, _bar(wb, "Value by outcome", "Analytics", first, last, INR_WHOLE, [AMBER, GOOD, BAD], "column", cat_col=1, val_col=3))
+    ages_top = at[0]
+    ws.write_string(at[0], 1, "Money on hold, by how long it has waited", wb.add_format(dict(bold=True, font_color=INK)))
+    at[0] += 1
+    first, last = table(["Waiting", "Invoices", "Value"], [(x["label"], x["count"], x["value"]) for x in a["hold_ages"]], [None, None, money])
+    if o["HOLD"]["count"]:
+        chart(ages_top, _bar(wb, "Money on hold by age", "Analytics", first, last, INR_WHOLE, [AMBER] * len(a["hold_ages"]), cat_col=1, val_col=3))
+
+    # 2. spend over time
+    months = _months(a["spend"])
+    top = section("Spend over time", "Value approved for payment, by invoice month." +
+                  (f" {a['undated_spend']} approved invoice{'' if a['undated_spend'] == 1 else 's'} had no date and are left out." if a["undated_spend"] else ""))
+    first, last = table(["Month", "Approved"], months, [None, money])
+    if months:
+        chart(top, _bar(wb, "Approved spend per month", "Analytics", first, last, INR_WHOLE, kind="line" if len(months) > 1 else "column",
+                        cat_col=1, val_col=2, labels=len(months) <= 12))
+
+    # 3. fraud and control flags
+    top = section("Fraud and control flags", "Counted apart from the holds, so the dangerous ones aren't hidden.")
+    rows, colors = [], []
+    for kind, (action, what, color) in FLAG_ACTION.items():
+        total = sum(x["count"] for x in a["flags"].get(kind, []))
+        ws.write_string(at[0], 1, f"{action}: {total}", wb.add_format(dict(bold=True, font_color=color)))
+        ws.merge_range(at[0], 2, at[0], 6, what, muted)
+        at[0] += 1
+        for x in a["flags"].get(kind, []):
+            rows.append((CODE_LABEL.get(x["code"], x["code"]), action, x["count"]))
+            colors.append(color)
+    at[0] += 1
+    first, last = table(["Flag", "Action", "Invoices"], rows, [None, None, None])
+    if rows:
+        chart(top, _bar(wb, "Fraud and control flags", "Analytics", first, last, colors=colors, cat_col=1, val_col=3))
+
+    # 4. vendor scorecard
+    vs = a["vendors"]
+    top = section("Vendor scorecard", f"Who sends the most, how often it stops, and why. {a['vendor_count']} vendor{'' if a['vendor_count'] == 1 else 's'}.")
+    first, last = table(["Vendor", "Invoices", "Stopped", "Stop rate", "Top reason", "Value"],
+                        [(v["name"], v["invoices"], v["stopped"], v["hold_rate"] / 100,
+                          f"{CODE_LABEL.get(v['top_reason'], v['top_reason'])} × {v['top_reason_count']}" if v["top_reason"] else "Never stopped", v["value"]) for v in vs],
+                        [None, None, None, pct, wrap, money])
+    if vs:
+        shown = vs[:TOP_N]
+        chart(top, _bar(wb, f"Invoices per vendor (top {len(shown)})", "Analytics", first, first + len(shown) - 1, cat_col=1, val_col=2))
+
+    # 5. batch throughput
+    bs = a["batches"]
+    multi = [b for b in bs if b["batch"]]
+    n = sum(b["invoices"] for b in multi)
+    cleared = sum(b["cleared"] for b in multi)
+    section("Batch throughput", "Invoices per upload, seconds of checking each, and how many cleared without a person.")
+    if multi:
+        ws.set_row(at[0], 24)
+        for i, (value, fmt, note) in enumerate([(round(n / len(multi), 1), big, f"invoices per upload, {len(multi)} upload{'' if len(multi) == 1 else 's'}"),
+                                                (round(sum(b["avg_seconds"] * b["invoices"] for b in multi) / n, 1) if n else 0, wb.add_format(dict(font_size=16, bold=True, font_color=INK, align="left", num_format='0.0"s"')), "of checking per invoice"),
+                                                (cleared / n if n else 0, wb.add_format(dict(font_size=16, bold=True, font_color=INK, align="left", num_format="0%")), f"cleared without a person ({cleared} of {n})")]):
+            ws.merge_range(at[0], 1 + i * 2, at[0], 2 + i * 2, value, fmt)
+            ws.merge_range(at[0] + 1, 1 + i * 2, at[0] + 1, 2 + i * 2, note, small)
+        at[0] += 3
+    else:
+        ws.write_string(at[0], 1, "No multi-file uploads yet.", muted)
+        at[0] += 2
+    moment = lambda s: datetime.fromisoformat(s) if s else None
+    table(["Upload", "Started", "Invoices", "Seconds each", "Cleared without a person", "Cleared %"],
+          [(f"{b['first']}" + (f" + {b['invoices'] - 1} more" if b["invoices"] > 1 else "") if b["batch"] else "Single files",
+            moment(b["started"]) if b["batch"] else None, b["invoices"], b["avg_seconds"], b["cleared"], b["cleared_pct"] / 100) for b in bs],
+          [wrap, stamp, None, secs, None, pct])
+    return ws
 
 
 def _vendor_sheet(wb, name, vendors, runs):
@@ -103,7 +257,8 @@ def approved_vendors(vendors, runs):
     return out.getvalue()
 
 
-def workbook(stats, runs, pos, vendors, period=""):
+def workbook(stats, runs, pos, vendors, period="", analytics=None, folder=None):
+    """The report. analytics is the Analytics tab's data for the same runs; folder names the folder they come from."""
     out = io.BytesIO()
     wb = xlsxwriter.Workbook(out, BOOK)
     head = wb.add_format(HEAD)
@@ -121,6 +276,9 @@ def workbook(stats, runs, pos, vendors, period=""):
     summary.hide_gridlines(2)
     summary.set_landscape()
     summary.fit_to_pages(1, 1)
+    scope = (f"Folder: {folder}. " if folder else "") + (f"Invoices dated {period}. " if period else "")
+    if analytics is not None:
+        _analytics_sheet(wb, analytics, head, money, scope)
 
     invoice_columns = [
         ("Received", 17, stamp, lambda r: moment(r["created_at"])), ("File", 30, None, lambda r: r["filename"]),
@@ -180,8 +338,9 @@ def workbook(stats, runs, pos, vendors, period=""):
     summary.set_row(1, 30)
     summary.write_string(1, 1, "Invoice Flow report", wb.add_format(dict(font_size=20, bold=True, font_color=INK)))
     muted = wb.add_format(dict(font_color=INK_2))
-    scope = f"Invoices dated {period}. The PO ledger is always the current position. " if period else ""
-    summary.write_string(2, 1, f"Generated {datetime.now():%d %b %Y, %H:%M}. {scope}Charts are live: they read from the Chart data sheet.", muted)
+    ledger_note = "The PO ledger is always the current position. " if period or folder else ""
+    summary.write_string(2, 1, f"Generated {datetime.now():%d %b %Y, %H:%M}. {scope}{ledger_note}Charts are live: they read from the Chart data sheet."
+                         + (" The Analytics sheet has everything on the Analytics tab." if analytics is not None else ""), muted)
 
     tile_value = wb.add_format(dict(font_size=18, bold=True, font_color=INK, align="left"))
     tile_money = wb.add_format(dict(font_size=18, bold=True, font_color=INK, align="left", num_format=INR))

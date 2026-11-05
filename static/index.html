@@ -68,6 +68,63 @@
   <a href="#rules" data-tab="rules">Rules</a>
 </nav>
 
+<!-- signed out: what the app is, then the sign-in card further down the page -->
+<div class="landing" id="landing" hidden>
+  <nav class="lp-top" aria-label="Invoice Flow">
+    <span class="brand"><span class="brand-mark" aria-hidden="true">✓</span><span class="brand-name">Invoice Flow</span></span>
+    <span class="lp-top-go"><a href="#login" data-lp-go="login">Log in</a><a class="btn primary" href="#signup" data-lp-go="signup">Get started</a></span>
+  </nav>
+  <section class="lp-hero" aria-labelledby="lp-title">
+    <div class="lp-copy">
+      <p class="lp-eyebrow">Accounts payable, on autopilot</p>
+      <h1 id="lp-title">From invoice to decision <span class="lp-hl">in seconds.</span></h1>
+      <p class="lp-lede">Drop in a PDF, a phone photo or a whole folder. Invoice Flow reads every bill, matches it to your purchase orders
+        and approved vendors, checks the GST and the maths, then stamps it <b>Approved</b>, <b>Held</b> or <b>Rejected</b>, with the reason in plain words.</p>
+      <div class="lp-cta">
+        <a class="btn primary" href="#signup" data-lp-go="signup">Create a free account</a>
+        <a class="btn" href="#login" data-lp-go="login">I have an account</a>
+      </div>
+      <ul class="lp-proof">
+        <li><b>30+</b> checks on every invoice</li>
+        <li><b>PDF, scan or photo</b> one file or a whole folder</li>
+        <li><b>1 click</b> Excel report</li>
+      </ul>
+    </div>
+    <div class="lp-demo" aria-hidden="true">
+      <div class="lp-doc">
+        <p class="lp-doc-head"><b>Tax invoice</b><span>INV-0142</span></p>
+        <p class="lp-doc-vendor">Northwind Office Supplies</p>
+        <div class="lp-doc-lines"><i></i><i></i><i></i></div>
+        <p class="lp-doc-total"><span>Total</span><b>₹1,18,000.00</b></p>
+      </div>
+      <ul class="lp-checks">
+        <li>Vendor approved</li><li>GSTIN matches</li><li>PO has room</li><li>GST at 18%</li><li>Totals add up</li>
+      </ul>
+      <span class="lp-stamp">Approved</span>
+    </div>
+  </section>
+  <section class="lp-features" aria-label="What it does">
+    <article class="lp-f lp-f-ink"><span class="lp-f-ico" aria-hidden="true">⌕</span><h2>Reads anything</h2>
+      <p>PDFs, scans, phone photos and hand-filled bill books. Vendor, number, date, PO, tax and every line, pulled out for you.</p></article>
+    <article class="lp-f lp-f-mint"><span class="lp-f-ico" aria-hidden="true">✓</span><h2>Checks everything</h2>
+      <p>Vendor and GSTIN, PO match and balance, GST rates, sums, duplicates and reused numbers. Nothing slips through.</p></article>
+    <article class="lp-f lp-f-sun"><span class="lp-f-ico" aria-hidden="true">!</span><h2>Explains every call</h2>
+      <p>Each decision lists what stopped it and what to do next: call the vendor, or ask for a resend. No black box.</p></article>
+    <article class="lp-f lp-f-pen"><span class="lp-f-ico" aria-hidden="true">▤</span><h2>Reports in one click</h2>
+      <p>A live dashboard, analytics on spend, holds and vendors, and an Excel report for any folder or month.</p></article>
+  </section>
+  <section class="lp-how" aria-labelledby="lp-how-title">
+    <h2 id="lp-how-title">How it works</h2>
+    <ol>
+      <li><b>Upload</b><span>Drop a file, several, or a whole folder.</span></li>
+      <li><b>Read</b><span>Every field is found and shown where it came from.</span></li>
+      <li><b>Check</b><span>Your vendors, POs and tax rules, applied the same way every time.</span></li>
+      <li><b>Decide</b><span>Approved for payment, held for you, or rejected, with the reason.</span></li>
+    </ol>
+  </section>
+  <a class="lp-scroll" href="#auth" data-lp-go="login"><span>Sign in below</span><span aria-hidden="true">↓</span></a>
+</div>
+
 <section class="auth" id="auth" hidden>
   <h1 id="auth-title">Sign in to Invoice Flow</h1>
   <p class="lede">Your invoices, dashboard and approved vendors are private to your account.</p>

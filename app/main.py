@@ -802,8 +802,9 @@ def stats(user: dict = Depends(auth.current_user), period: str = "", folder: int
 HOLD_AGES = [("Under a day", 0, 1), ("1-3 days", 1, 3), ("3-7 days", 3, 7), ("Over a week", 7, None)]
 
 
-def _analytics(rows, now=None):
-    """Figures for the Analytics tab. Unlike the Overview, rejected invoices count: several charts are about them."""
+def _analytics(rows, now=None, top=15):
+    """Figures for the Analytics tab. Unlike the Overview, rejected invoices count: several charts are about them.
+    top caps the vendor and batch lists for the page; the Excel report passes None to list them all."""
     now = now or datetime.now()
     rows = [r for r in rows if r["status"] in ("done", "error") and r["decision"]]
     eff = lambda r: r["final_decision"] or r["decision"]
@@ -860,7 +861,7 @@ def _analytics(rows, now=None):
     batches = sorted([b for b in batches if b["batch"]], key=lambda b: b["started"], reverse=True) + [b for b in batches if not b["batch"]]
 
     return dict(total=len(rows), outcome=outcome, hold_ages=ages, spend=sorted(spend.items()), undated_spend=undated,
-                flags=flags, vendors=vendors[:15], vendor_count=len(vendors), batches=batches[:12])
+                flags=flags, vendors=vendors[:top] if top else vendors, vendor_count=len(vendors), batches=batches[:12] if top else batches)
 
 
 @app.get("/api/analytics")
@@ -871,8 +872,9 @@ def analytics(user: dict = Depends(auth.current_user), period: str = "", folder:
 @app.get("/api/export.xlsx")
 def export_xlsx(user: dict = Depends(auth.current_user), period: str = "", folder: int | None = None):
     rows = _scope(user, period, folder)
-    data = export.workbook(_stats(rows), rows, pos(user)["pos"], rules.load_vendors(user["id"]), period)
     folder_name = (db.get_folder(folder, user["id"]) or {}).get("name") if folder is not None else None
+    data = export.workbook(_stats(rows), rows, pos(user)["pos"], rules.load_vendors(user["id"]), period,
+                           analytics=_analytics(rows, top=None), folder=folder_name)
     slug = re.sub(r"[^A-Za-z0-9]+", "-", folder_name).strip("-").lower() + "-" if folder_name else ""
     name = f"invoice-flow-report-{slug}{period or config.AS_OF}.xlsx"
     return Response(data, media_type=XLSX, headers={"Content-Disposition": f'attachment; filename="{name}"'})

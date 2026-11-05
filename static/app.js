@@ -1670,21 +1670,32 @@ async function init() {
 function showAuth() {
   const login = $("#auth-form"), signup = $("#signup-form");
   $("#auth").hidden = false;
+  $("#landing").hidden = false;                              // what the app does comes first; the sign-in card is a scroll below
   /* two tabs: Log in, and Create account (username, password, confirm password), which signs straight in */
-  const tab = name => {
+  const tab = (name, focus = true) => {
     const creating = name === "signup";
     login.hidden = creating; signup.hidden = !creating;
     $$('[role="tab"][data-auth-tab]').forEach(b => b.setAttribute("aria-selected", String(b.dataset.authTab === name)));
     $("#auth-title").textContent = creating ? "Create your account" : "Sign in to Invoice Flow";
-    $("[name=username]", creating ? signup : login).focus();
+    if (focus) $("[name=username]", creating ? signup : login).focus({ preventScroll: true });
+  };
+  const reveal = (name, smooth = true) => {                  // "Get started" / "Log in" on the landing: open that tab and scroll to the card
+    tab(name, false);
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    $("#auth").scrollIntoView({ behavior: smooth && !still ? "smooth" : "auto", block: "start" });
+    setTimeout(() => $("[name=username]", name === "signup" ? signup : login).focus({ preventScroll: true }), smooth && !still ? 450 : 0);
   };
   $$("[data-auth-tab]").forEach(b => b.addEventListener("click", ev => { ev.preventDefault(); tab(b.dataset.authTab); }));
+  $$("[data-lp-go]").forEach(b => b.addEventListener("click", ev => { ev.preventDefault(); reveal(b.dataset.lpGo); }));
   const send = async (form, error, url, body) => {
     error.hidden = true;
     const button = $("button[type=submit]", form); button.disabled = true;
     try {
       const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (r.ok) { location.hash = ""; location.reload(); return; }   // a fresh page: nothing from another login stays in memory
+      if (r.ok) {
+        if (url === "/api/signup") try { sessionStorage.setItem("invoice-flow-new-account", body.username); } catch (e) { /* the tour still starts: no runs yet */ }
+        location.hash = ""; location.reload(); return;          // a fresh page: nothing from another login stays in memory
+      }
       error.textContent = (await r.json().catch(() => ({}))).detail || "Something went wrong. Try again.";
     } catch (e) { error.textContent = "Couldn't reach the server. Check your connection and try again."; }
     error.hidden = false; button.disabled = false;
@@ -1702,7 +1713,10 @@ function showAuth() {
     if (f.password !== f.confirm) { error.textContent = "The passwords don't match."; error.hidden = false; $("[name=confirm]", signup).focus(); return; }
     send(signup, error, "/api/signup", { username: f.username, password: f.password, confirm: f.confirm });
   });
-  tab(location.hash === "#signup" ? "signup" : "login");     // a link to …/#signup opens straight on Create account
+  // a link to …/#signup or …/#login opens straight on that card; so does a Google sign-in that came back with an error
+  if (location.hash === "#signup" || location.hash === "#login") reveal(location.hash.slice(1), false);
+  else if (!$("#auth-error").hidden) reveal("login", false);
+  else tab("login", false);
 }
 
 async function boot() {

@@ -23,9 +23,19 @@ window.Guide = (() => {
   const key = () => `invoice-flow-guide:${(typeof S !== "undefined" && S.me) || "anon"}`;
   let root, i = 0, steps = [], waitTimer = null, raf = null, demo = null;
 
+  /* one page of the processing, explained while it is on screen. The page waits for the person: the tour holds the
+     wizard (no automatic move to the next page) and moves on when they tap the page's own Next button */
+  const page = (n, title, text, ready, waiting) => ({
+    target: () => $(`#run .wz-card[data-step="${n}"]`) || $("#run .wz-card"), point: "#run [data-next]", title, tap: true, hold: true, live: true,
+    text: () => `${text}<span class="g-now">${$("#run [data-next]") ? `${ready} <b>Tap Next on the page</b> when you're ready.` : waiting}</span>`,
+    done: () => +(($("#run .wz-card") || {}).dataset || {}).step > n,
+  });
+  const card = (label, title, text) => ({ target: `#dash-analytics .viz-card[aria-label="${label}"]`, title, text, wait4: true });
+
   const STEPS = () => [
-    { title: "Hi, I'm Shiven!", text: "I'll show you around Invoice Flow and help you process your first invoice. It takes about a minute.",
-      next: "Let's go" },
+    { title: "Hey, I'm Shiven! Welcome to Invoice Flow", next: "Let's go",
+      text: "Invoice Flow checks your bills so you don't have to. I'll show you every part of the app and process your first invoice with you, " +
+        "one step at a time. <b>Nothing moves on until you tap</b>, so take as long as you like to read." },
     { target: "#menu", title: "The menu", tap: true,
       text: () => narrow() ? "Tap the menu to see your folders." : "Tap the menu to open the full sidebar. Tap it again later to shrink it to icons, so the page gets more room.",
       done: () => narrow() ? document.body.classList.contains("drawer-open") : !document.body.classList.contains("rail") },
@@ -35,26 +45,67 @@ window.Guide = (() => {
     { target: ".drop", title: "Your invoices go here", before: () => { location.hash = "#process"; if (S.current || typeof VIEW !== "undefined" && VIEW) newDocument(); },
       text: "Drop PDFs or photos here, choose several at once, a whole folder, or a ZIP. Clean PDFs, scans and phone photos all work." },
     { title: "Let's process your first invoice", place: "center", action: "Process a sample invoice",
-      text: "I've got a sample invoice ready. Tap the button and watch it go from upload to a decision.",
-      run: async () => { demo = pickSample(); await runScenarios([demo]); } },
-    { target: "#run .stepper", title: "Watch it work", wait: true,
-      text: () => `Right now: <b>${stageNow()}</b>. First the document is read, then the vendor, number, date and total are picked out, then the checks run: amounts, vendor, purchase order, duplicates and the PO balance.`,
-      done: () => !!$('#run .wz-card[data-step="6"] .wz-outcome') },
-    { target: () => $("#run .wz-card .headline") || $("#run .wz-outcome"), title: "The decision, and why",
-      text: () => `${verdictLine()} The reasons are listed underneath, so nothing is a black box. Green means approved, amber means held for a person, red means rejected.` },
-    { target: () => $("#run [data-stamp]") || $("#run .wz-decide"), title: () => $("#run .wz-decide") ? "Your call" : "Stamp it", tap: true,
-      text: () => $("#run .wz-decide") ? "This one is held for a person: that's you. Tap Approve, Keep on hold or Reject." : "Tap Next to stamp the decision.",
+      text: "I've got a sample invoice ready: a real-looking tax invoice from a supplier. Tap the button and I'll walk you through each of the six pages it goes through, from reading it to the final stamp.",
+      run: async () => { demo = pickSample(); await runScenarios([demo]); hold(); } },
+    page(2, "1 · Read the document",
+      "First Invoice Flow opens the file and reads every page. A clean PDF already has its words inside, so they're copied out exactly. " +
+      "A scan or a phone photo is a picture, so it goes through <b>OCR</b> (optical character recognition), which turns the picture into text. " +
+      "The page it's reading is shown beside the summary.",
+      "Done: the text is in.", "Reading now. Photos take a few seconds longer."),
+    page(3, "2 · Pull out the details",
+      "Now it finds what an accounts team needs from all that text: <b>who the vendor is</b>, the <b>invoice number</b>, the <b>date</b> and the <b>total</b>, " +
+      "plus the GSTIN, the PO number, the tax and every line item. Each value is checked against the document word for word, so nothing is made up. " +
+      "Anything it can't find says <b>Not found</b> instead of guessing.",
+      "Got the details.", "Picking out the details now."),
+    page(4, "3 · Review what was read",
+      "Here's everything side by side with the page itself. A <b>✓</b> next to a field means it was found word for word in the document. " +
+      "When you upload your own invoices, this is where you stop to <b>fix or fill in</b> anything, add a note, or approve a vendor you haven't used before. " +
+      "For this sample everything was read cleanly, so there's nothing to change.",
+      "Looks right.", "Getting the review ready."),
+    page(5, "4 · Run the checks",
+      "Now the rules run, one after another, and each line turns green, amber or red: " +
+      "<b>Validate</b> (do the lines, GST and total add up, at the right tax rate?), <b>Vendor</b> (is it on your approved list, with a matching GSTIN?), " +
+      "<b>Purchase order</b> (does it match a PO you raised?), <b>Duplicates</b> (has this bill been seen before?) and " +
+      "<b>PO balance</b> (is there enough left on the PO to pay it?).",
+      "All the checks are done.", "The checks are still running…"),
+    { target: () => $("#run .wz-card .headline") || $("#run .wz-outcome"), title: "5 · The decision, and why", hold: true,
+      text: () => `${verdictLine()} The system weighs everything the checks found and makes one call: <b>Approved</b> (all clear, ready to pay), ` +
+        "<b>Held</b> (something needs a person, and the reason says what) or <b>Rejected</b> (it can't be paid, like a blocked vendor or a duplicate). " +
+        "The reasons are listed underneath, so nothing is a black box. Below them you can save the invoice to a folder." },
+    { target: () => $("#run [data-stamp]") || $("#run .wz-decide"), title: () => $("#run .wz-decide") ? "6 · Your call" : "6 · Stamp it", tap: true, hold: true,
+      text: () => $("#run .wz-decide") ? "This one is held for a person: that's you. Tap Approve, Keep on hold or Reject, and add a note for the audit trail if you like."
+        : "Happy with the decision? Tap <b>Next</b> to stamp it.",
       done: () => !!$("#run .wz-stamp") },
-    { target: "#run .wz-stamp .stamp", title: "Done!", text: "That's your first invoice processed. Every invoice ends with a stamp like this, showing who decided: the system or a person." },
-    { target: '.dock a[data-tab="dashboard"]', title: "The Dashboard", tap: true, text: "Tap Dashboard to see the big picture.",
+    { target: "#run .wz-stamp .stamp", title: "Done! Your first invoice", text: "Every invoice ends with a stamp like this: the decision, " +
+      "who made it (the system or a person) and the key details. It's saved in your history and counted on the Dashboard straight away." },
+    { target: '.dock a[data-tab="dashboard"]', title: "The Dashboard", tap: true, text: "Tap <b>Dashboard</b> to see the big picture.",
       done: () => location.hash === "#dashboard" },
-    { target: "#tally", title: "Your numbers", text: "At a glance: invoices processed, how many passed with no human touch, the money approved and the money held, and what's waiting for you.",
+    { target: "#tally", title: "Your numbers", text: "At a glance: invoices processed, how many passed with no human touch, the money approved for payment, " +
+      "the money held, and how many are waiting for you.",
       before: () => { if (typeof dashTab === "function") dashTab("overview"); } },
-    { target: () => $("#filter-bar"), title: "Find anything", text: "Filter by folder, month or outcome, group the history, or search for an invoice, vendor or PO." },
-    { target: () => $("#history-section") || $("#history"), title: "History", text: "Every invoice lives here. Tap a row to open its full trail: the page, what was read, every check." },
-    { target: '[data-dash-tab="analytics"]', title: "Analytics", text: "Spend over time, money on hold by age, why invoices stop, and a scorecard for each vendor." },
-    { target: '.dock a[data-tab="ledger"]', title: "PO ledger", text: "How much of each purchase order has been billed so far, and your approved vendors." },
-    { target: '.dock a[data-tab="rules"]', title: "Rules", text: "Every check and threshold, written out, so you always know why an invoice was approved or held." },
+    { target: () => $("#filter-bar"), title: "Find anything", text: "Filter by folder, month or outcome, group the history, or search for an invoice, vendor or PO. " +
+      "On a phone, <b>Sort</b> and <b>Filters</b> open a full-screen page." },
+    { target: () => $("#history-section") || $("#history"), title: "History", text: "Every invoice lives here. Tap a row to open its full trail: the page, what was read and every check." },
+    { target: '[data-dash-tab="analytics"]', title: "Analytics", tap: true, text: "Now tap <b>Analytics</b> for the deeper view.",
+      done: () => { const p = $("#dash-analytics"); return !!p && !p.hidden; } },
+    card("Outcomes and money on hold", "Outcomes and money on hold",
+      "How much money is <b>held</b> waiting for you, <b>approved</b> for payment and <b>rejected</b>. The bars underneath show how long held money has been waiting, " +
+      "so old holds don't get forgotten."),
+    card("Spend over time", "Spend over time",
+      "Money approved for payment, by invoice date. Switch between <b>Daily</b>, <b>Monthly</b> and <b>Yearly</b>, and hover or tap a point to read it."),
+    card("Fraud and control flags", "Fraud and control flags",
+      "Problems are split by what to do about them. <b>Call the vendor</b>: possible fraud, like a GSTIN or PO that doesn't fit. " +
+      "<b>Ask for a resend</b>: document problems, like sums that don't add up or a missing GSTIN."),
+    card("Vendor scorecard", "Vendor scorecard",
+      "Every vendor: how many invoices they send, how often theirs stop, the most common reason and the total value. One message to a vendor can fix many holds."),
+    card("Batch throughput", "Batch throughput",
+      "For each upload of several files or a folder: how many invoices, how many seconds each took to check, and how many cleared without a person."),
+    { target: "#export", title: "Download the Excel report", point: "#export",
+      text: "One click builds an Excel workbook for exactly what you're looking at: the chosen <b>folder</b> and <b>month</b>. " +
+        "Inside: a <b>Summary</b> with charts, an <b>Analytics</b> sheet with everything on this tab, that folder's <b>invoice list</b>, the PO ledger, your vendors and the rejected invoices. " +
+        "The charts are real Excel charts, so they're ready for a report." },
+    { target: '.dock a[data-tab="ledger"]', title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors." },
+    { target: '.dock a[data-tab="rules"]', title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." },
     { target: "#guide-start", title: "That's the tour!", next: "Finish", before: () => { if (narrow()) return; setRail(false, false); },
       text: "Upload your own invoices whenever you're ready. If you ever need me again, tap Ask Shiven." },
   ];
@@ -63,9 +114,10 @@ window.Guide = (() => {
     const files = (S.scenarios || []).map(s => s.file);
     return PREFERRED.find(f => files.includes(f) && !latestFor(f)) || files.find(f => !latestFor(f)) || PREFERRED[0];
   }
-  function stageNow() {
-    const cur = $("#run .stepper li.current .lbl") || $("#run .wz-card h1");
-    return cur ? cur.textContent.trim() : "starting";
+  /* the demo's pages stay put until the person taps Next: no automatic move while they read */
+  function hold() {
+    if (typeof VIEW === "undefined" || !VIEW || (demo && VIEW.filename !== demo)) return;
+    if (!VIEW.manual) { clearTimeout(VIEW.timer); VIEW.timer = null; VIEW.manual = true; if (VIEW.step < 7) VIEW.render(); }
   }
   function verdictLine() {
     const pill = $("#run .wz-outcome .pill");
@@ -112,15 +164,18 @@ window.Guide = (() => {
     set(".g-bottom", { left: "0", top: `${hole.b}px`, width: "100%", height: `${Math.max(H - hole.b, 0)}px` });
     set(".g-left", { left: "0", top: `${hole.t}px`, width: `${hole.l}px`, height: `${Math.max(hole.b - hole.t, 0)}px` });
     set(".g-right", { left: `${hole.r}px`, top: `${hole.t}px`, width: `${Math.max(W - hole.r, 0)}px`, height: `${Math.max(hole.b - hole.t, 0)}px` });
-    hand.hidden = !(box && step.tap);
-    if (!hand.hidden) Object.assign(hand.style, { left: `${Math.min(box.r - 18, W - 44)}px`, top: `${Math.min(box.b - 10, H - 50)}px` });
-    // the panel sits in a corner clear of the target; centred when there is nothing to point at
+    // the hand points at the control to tap: the page's own button when the step names one, else the highlighted control
+    const pointEl = step.point ? $(step.point) : null, pr = visible(pointEl) ? pointEl.getBoundingClientRect() : null;
+    const aim = pr && pr.bottom > 0 && pr.top < H ? { l: pr.left, t: pr.top, r: pr.right, b: pr.bottom } : step.point ? null : box;
+    hand.hidden = !(aim && step.tap);
+    if (!hand.hidden) Object.assign(hand.style, { left: `${Math.min(aim.r - 18, W - 44)}px`, top: `${Math.min(aim.b - 10, H - 50)}px` });
+    // the panel sits in a corner clear of the target (or at least clear of the button to tap); centred when there is nothing to point at
     const pw = panel.offsetWidth, ph = panel.offsetHeight, m = 16;
     const spots = val(step.place) === "center" || !box ? [[(W - pw) / 2, (H - ph) / 2]]
       : narrow() ? [[m / 2, H - ph - m / 2], [m / 2, m / 2]]
       : [[W - pw - m, H - ph - m], [m, H - ph - m], [W - pw - m, m], [m, m]];
-    const clear = ([x, y]) => !box || x > box.r || x + pw < box.l || y > box.b || y + ph < box.t;
-    const [x, y] = spots.find(clear) || spots[0];
+    const off = b => ([x, y]) => !b || x > b.r || x + pw < b.l || y > b.b || y + ph < b.t;
+    const [x, y] = spots.find(off(box)) || spots.find(off(aim && { l: aim.l - 12, t: aim.t - 12, r: aim.r + 12, b: aim.b + 12 })) || spots[0];
     Object.assign(panel.style, { left: `${Math.max(x, 4)}px`, top: `${Math.max(y, 4)}px` });
     raf = requestAnimationFrame(place);
   }
@@ -147,18 +202,29 @@ window.Guide = (() => {
     if (n < 0) n = 0;
     if (n >= steps.length) return stop(true);
     i = n;
-    const step = steps[i];
+    const step = steps[i], me = n;
     if (step.before) step.before();
+    if (step.hold) hold();
     await new Promise(r => setTimeout(r, 120));          // let the page draw what the step points at
+    for (let t = 0; step.wait4 && !targetOf(step) && t < 25; t++) await new Promise(r => setTimeout(r, 200));   // a chart still loading
+    if (i !== me || !root || !root.isConnected) return;
     const el = targetOf(step);
-    // to the middle of the screen: at the bottom a phone's section bar would sit over it (the bar itself stays put)
-    if (el && !el.closest(".dock, .sidebar")) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    // a tall processing page starts at its top so it can be read from the beginning; anything else goes to the middle of the
+    // screen: at the bottom a phone's section bar would sit over it (the bar itself stays put)
+    if (el && !el.closest(".dock, .sidebar")) {
+      const tall = el.getBoundingClientRect().height > innerHeight * 0.7;
+      el.scrollIntoView({ block: tall ? "start" : "center", behavior: "smooth" });
+    }
     render();
-    if (step.done) {                                      // a step that waits on the person, or on the work
+    let pointed = false;
+    if (step.done || step.live || step.hold) {            // a step that waits on the person, or on the work
       waitTimer = setInterval(() => {
         if (!root || !root.isConnected) return clearInterval(waitTimer);
-        if (step.wait) $("#g-text", root).innerHTML = val(step.text);
-        if (step.done()) { clearInterval(waitTimer); setTimeout(() => go(i + 1), step.tap ? 350 : 600); }
+        if (step.hold) hold();
+        if (step.live || step.wait) $("#g-text", root).innerHTML = val(step.text);
+        const p = step.point && $(step.point);              // the page's Next button just appeared: bring it into view once
+        if (p && !pointed) { pointed = true; const r = p.getBoundingClientRect(); if (r.bottom > innerHeight - 90 || r.top < 0) p.scrollIntoView({ block: "center", behavior: "smooth" }); }
+        if (step.done && step.done()) { clearInterval(waitTimer); setTimeout(() => go(i + 1), step.tap ? 350 : 600); }
       }, 300);
     }
   }
@@ -176,15 +242,19 @@ window.Guide = (() => {
     clearInterval(waitTimer); cancelAnimationFrame(raf);
     if (root) root.remove();
     document.body.classList.remove("guide-on");
+    // tour closed mid-demo: the invoice's pages carry on by themselves again
+    if (demo && typeof VIEW !== "undefined" && VIEW && VIEW.filename === demo && VIEW.manual && !VIEW.review) { VIEW.manual = false; VIEW.advance(); }
     if (finished) try { localStorage.setItem(key(), "done"); } catch (e) { /* storage blocked */ }
     const b = $("#guide-start"); if (b) b.focus({ preventScroll: true });
   }
 
-  /* first sign-in to an empty account: the tour starts by itself, once per account in this browser */
+  /* a brand-new account: Shiven says hello straight away. Otherwise the first sign-in to an empty account starts the tour,
+     once per account in this browser */
   function maybeStart() {
-    let seen = null;
+    let seen = null, fresh = false;
+    try { fresh = sessionStorage.getItem("invoice-flow-new-account") === S.me; sessionStorage.removeItem("invoice-flow-new-account"); } catch (e) { /* no flag */ }
     try { seen = localStorage.getItem(key()); } catch (e) { /* storage blocked: treat as seen, never nag */ seen = "blocked"; }
-    if (!seen && S.runs.size === 0 && !location.hash.startsWith("#signup")) setTimeout(start, 700);
+    if (fresh || (!seen && S.runs.size === 0 && !location.hash.startsWith("#signup"))) setTimeout(start, 700);
   }
 
   document.addEventListener("click", ev => { if (ev.target.closest("#guide-start")) start(); });
