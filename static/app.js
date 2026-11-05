@@ -1392,74 +1392,104 @@ function refreshVisible() {
 }
 
 /* ------------------------------------------------------------ sort and filter sheet -- */
-/* On a phone the Dashboard's filter bar is one line that slides sideways, as on Flipkart: search, Sort, Filter and the
-   outcome chips. Sort and Filter open a sheet from the bottom. The sheet only sets the bar's own controls and fires their
-   change events, so every filter behaves exactly as it does on a wide screen */
+/* On a phone the Dashboard's filters take two lines, as on Flipkart: the search, then one line that slides sideways and
+   starts with Sort and Filters, followed by every filter (Folder, Dated, the outcome chips). Sort, Filters and the Folder /
+   Dated chips open a full-screen filter page: categories on the left, their options with counts on the right. The page
+   only sets the bar's own controls and fires their change events, so every filter behaves as it does on a wide screen */
 const onAnalytics = () => $("#filter-bar").classList.contains("on-analytics");
+const FS_TABS = [["sort", "Sort"], ["folder", "Folder"], ["dated", "Dated"], ["outcome", "Outcome"]];
+let fsTab = "folder";
 function updateFilterCount() {
   const badge = $("#filter-count"); if (!badge) return;
   const n = [S.view.folder != null, S.view.kind !== "all", !onAnalytics() && S.filter !== "ALL"].filter(Boolean).length;
-  badge.hidden = !n; badge.textContent = n;
+  badge.hidden = !n; badge.textContent = n || "";
+  const folder = $("#folder-pick"), kind = $("#period-kind"), pick = $("#period-pick");
+  $("#fm-folder").textContent = folder.selectedOptions[0] ? folder.selectedOptions[0].textContent : "All invoices";
+  $("#fm-dated").textContent = kind.value === "all" || pick.disabled || !pick.selectedOptions[0] ? "All time" : pick.selectedOptions[0].textContent;
+  $$(".fm-pick").forEach(b => b.classList.toggle("on", b.dataset.sheet === "folder" ? S.view.folder != null : S.view.kind !== "all"));
 }
-function sheetOptions(name, options, current) {
-  return options.map(([value, label]) => `<label class="sheet-opt"><span>${esc(label)}</span>
-    <input type="radio" name="${name}" value="${esc(value)}" ${String(value) === String(current) ? "checked" : ""}></label>`).join("");
+function fsOptions(name, options, current) {      // options: [value, label, count or null]
+  return options.map(([value, label, count]) => `<label class="fs-opt"><input type="radio" name="${name}" value="${esc(value)}" ${String(value) === String(current) ? "checked" : ""}>
+    <span class="fs-box" aria-hidden="true"></span><span class="fs-label">${esc(label)}</span>${count == null ? "" : `<span class="fs-n">${count}</span>`}</label>`).join("");
 }
-const selectOptions = sel => [...sel.options].filter(o => !o.disabled).map(o => [o.value, o.textContent]);
-function renderSheet(kind) {
-  const body = $("#sheet-body"), foot = $("#sheet-foot");
-  $("#sheet").dataset.kind = kind;
-  if (kind === "sort") {
-    $("#sheet-title").textContent = "Sort by";
-    body.innerHTML = sheetOptions("group", selectOptions($("#group-by")), $("#group-by").value);
-    foot.innerHTML = "";
-    return;
+function fsRows() {                                // the invoices in view for the chosen period: what the counts are of
+  const p = period();
+  return S.history.filter(r => r.status === "done" && (!p || (r.invoice_date || "").startsWith(p)));
+}
+function renderSheet(tab = fsTab) {
+  const tabs = FS_TABS.filter(([k]) => !onAnalytics() || k === "folder" || k === "dated");
+  if (!tabs.some(([k]) => k === tab)) tab = tabs[0][0];
+  fsTab = tab;
+  $("#fs-nav").innerHTML = tabs.map(([k, label]) => `<button type="button" role="tab" id="fs-tab-${k}" data-fs-tab="${k}" aria-selected="${k === tab}"
+    aria-controls="sheet-body" tabindex="${k === tab ? 0 : -1}">${label}${k === "folder" && S.view.folder != null || k === "dated" && S.view.kind !== "all"
+      || k === "outcome" && S.filter !== "ALL" ? '<i class="fs-dot" aria-label="(set)"></i>' : ""}</button>`).join("");
+  $("#sheet-body").setAttribute("aria-labelledby", `fs-tab-${tab}`);
+  const body = $("#sheet-body"), pick = $("#period-pick"), rows = fsRows();
+  if (tab === "sort") {
+    body.innerHTML = `<p class="fs-h">Group the history by</p>${fsOptions("group", [...$("#group-by").options].map(o => [o.value, o.textContent, null]), $("#group-by").value)}`;
+  } else if (tab === "folder") {
+    const counts = Object.fromEntries(S.folders.map(f => [String(f.id), f.count]));
+    body.innerHTML = fsOptions("folder", [...$("#folder-pick").options].map(o => [o.value, o.textContent, o.value ? counts[o.value] ?? 0 : null]), $("#folder-pick").value);
+  } else if (tab === "dated") {
+    const dated = S.history.filter(r => r.status === "done" && r.invoice_date), yearly = S.view.kind === "year";
+    const inPick = v => dated.filter(r => r.invoice_date.startsWith(v)).length;
+    body.innerHTML = fsOptions("kind", [...$("#period-kind").options].map(o => [o.value, o.textContent, o.value === "all" ? S.history.filter(r => r.status === "done").length : null]), $("#period-kind").value)
+      + (!pick.hidden && !pick.disabled ? `<p class="fs-h">${yearly ? "Year" : "Month"}</p>${fsOptions("pick", [...pick.options].map(o => [o.value, o.textContent, inPick(o.value)]), pick.value)}` : "");
+  } else {
+    const n = k => rows.filter(r => eff(r) === k).length;
+    body.innerHTML = fsOptions("outcome", $$("#filters .chip").map(c => [c.dataset.f, c.textContent, c.dataset.f === "ALL" ? rows.length : n(c.dataset.f)]), S.filter);
   }
-  $("#sheet-title").textContent = "Filters";
-  const pick = $("#period-pick");
-  body.innerHTML = `<h3 class="sheet-h">Folder</h3>${sheetOptions("folder", selectOptions($("#folder-pick")), $("#folder-pick").value)}
-    <h3 class="sheet-h">Dated</h3>${sheetOptions("kind", selectOptions($("#period-kind")), $("#period-kind").value)}
-    ${!pick.hidden && !pick.disabled ? `<h3 class="sheet-h">${S.view.kind === "year" ? "Year" : "Month"}</h3>${sheetOptions("pick", selectOptions(pick), pick.value)}` : ""}
-    ${onAnalytics() ? "" : `<h3 class="sheet-h">Outcome</h3>${sheetOptions("outcome", $$("#filters .chip").map(c => [c.dataset.f, c.textContent]), S.filter)}`}`;
-  foot.innerHTML = `<button class="btn" type="button" data-sheet-clear>Clear all</button><button class="btn primary" type="button" data-sheet-close>Show results</button>`;
+  $("#fs-total").textContent = onAnalytics() ? "" : $("#history-count").textContent;
 }
-function openSheet(kind) {
-  renderSheet(kind);
-  $("#sheet").hidden = false; $("#sheet-scrim").hidden = false;
+function openSheet(tab) {
+  renderSheet(tab);
+  $("#sheet").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("sheet-open"));
   ($("#sheet-body input:checked") || $("#sheet-body input") || $("[data-sheet-close]")).focus();
 }
 function closeSheet() {
   if ($("#sheet").hidden) return;
   document.body.classList.remove("sheet-open");
-  $("#sheet-scrim").hidden = true;
   setTimeout(() => { if (!document.body.classList.contains("sheet-open")) $("#sheet").hidden = true; }, 250);
-  const opener = $(`[data-sheet="${$("#sheet").dataset.kind}"]`); if (opener) opener.focus();
+  const opener = $(`.f-mobile [data-sheet="${fsTab}"]`) || $(".f-mobile [data-sheet]"); if (opener) opener.focus();
 }
 function setControl(sel, value) {       // as if the person had picked it in the bar
   const el = $(sel); if (!el || el.value === value) return;
   el.value = value; el.dispatchEvent(new Event("change", { bubbles: true }));
 }
 function wireSheet() {
+  document.body.appendChild($("#sheet"));    // a full-screen page of its own: no page-level layout rule can offset it
   $("#filter-bar").addEventListener("click", ev => { const b = ev.target.closest("[data-sheet]"); if (b) openSheet(b.dataset.sheet); });
-  $("#sheet-scrim").addEventListener("click", closeSheet);
+  const refresh = (focusName) => setTimeout(() => {      // the dashboard reloads after a change; then show the new counts
+    if (!document.body.classList.contains("sheet-open")) return;
+    renderSheet(); const again = focusName && $(`#sheet-body input[name="${focusName}"]:checked`); if (again) again.focus();
+  }, 380);
   $("#sheet").addEventListener("click", ev => {
     if (ev.target.closest("[data-sheet-close]")) { closeSheet(); return; }
+    const t = ev.target.closest("[data-fs-tab]");
+    if (t) { renderSheet(t.dataset.fsTab); $(`[data-fs-tab="${fsTab}"]`).focus(); return; }
     if (ev.target.closest("[data-sheet-clear]")) {
       setControl("#folder-pick", ""); setControl("#period-kind", "all");
       if (S.filter !== "ALL") $('#filters [data-f="ALL"]').click();
-      setTimeout(() => renderSheet("filter"), 350);
+      refresh();
     }
+  });
+  $("#fs-nav").addEventListener("keydown", ev => {       // up / down move between categories, as in a vertical tab list
+    if (!["ArrowDown", "ArrowUp"].includes(ev.key)) return;
+    ev.preventDefault();
+    const tabs = $$("[data-fs-tab]"), i = tabs.findIndex(b => b.dataset.fsTab === fsTab);
+    const next = tabs[(i + (ev.key === "ArrowDown" ? 1 : tabs.length - 1)) % tabs.length];
+    renderSheet(next.dataset.fsTab); $(`[data-fs-tab="${fsTab}"]`).focus();
   });
   $("#sheet").addEventListener("change", ev => {
     const r = ev.target; if (r.type !== "radio") return;
-    if (r.name === "group") { setControl("#group-by", r.value); closeSheet(); return; }   // sorting is one choice: done
+    if (r.name === "group") setControl("#group-by", r.value);
     if (r.name === "folder") setControl("#folder-pick", r.value);
     if (r.name === "kind") setControl("#period-kind", r.value);
     if (r.name === "pick") setControl("#period-pick", r.value);
     if (r.name === "outcome") $(`#filters [data-f="${r.value}"]`).click();
-    setTimeout(() => { if (document.body.classList.contains("sheet-open")) { renderSheet("filter"); const again = $(`#sheet-body input[name="${r.name}"]:checked`); if (again) again.focus(); } }, 350);
     updateFilterCount();
+    refresh(r.name);
   });
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeSheet(); });
 }

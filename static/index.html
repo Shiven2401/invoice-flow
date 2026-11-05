@@ -108,14 +108,20 @@
     </div>
     <!-- every filter in one place: folder and period scope the whole Dashboard, the rest only the History table -->
     <div class="filter-bar" id="filter-bar" role="group" aria-label="Filters">
-      <!-- on a phone, as on Flipkart: Sort and Filter open sheets, and the bar is one line that slides sideways -->
+      <!-- on a phone, as on Flipkart: the search on its own line, then one sliding line that starts with Sort and Filters and
+           holds every filter; Sort, Filters and the Folder / Dated chips open the full-screen filter page -->
+      <div class="f-row">
       <div class="f-mobile">
         <button class="fm-btn history-only" type="button" data-sheet="sort" aria-haspopup="dialog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5"/></svg>
           <span>Sort</span></button>
-        <button class="fm-btn" type="button" data-sheet="filter" aria-haspopup="dialog">
+        <button class="fm-btn" type="button" data-sheet="folder" aria-haspopup="dialog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5h17l-6.5 8v5.5l-4 2V13z"/></svg>
-          <span>Filter</span><b class="fm-count" id="filter-count" hidden></b></button>
+          <span>Filters</span><b class="fm-count" id="filter-count" hidden></b></button>
+        <button class="fm-btn fm-pick" type="button" data-sheet="folder" aria-haspopup="dialog"><span id="fm-folder">All invoices</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="fm-btn fm-pick" type="button" data-sheet="dated" aria-haspopup="dialog"><span id="fm-dated">All time</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       </div>
       <label class="f f-folder"><span>Folder</span><select id="folder-pick"></select></label>
       <div class="f f-dated">
@@ -147,16 +153,23 @@
           <option value="none">No grouping</option>
         </select>
       </label>
+      </div>
       <input type="search" class="f-search history-only" id="history-search" placeholder="Find invoice, vendor, PO or file" aria-label="Find an invoice">
     </div>
-    <!-- the Sort and Filter sheet (phones): it sets the controls above, so filtering works exactly as on a wide screen -->
-    <div class="sheet-scrim" id="sheet-scrim" hidden></div>
-    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
-      <div class="sheet-head"><h2 id="sheet-title">Sort by</h2>
-        <button class="icon-btn sheet-close" type="button" data-sheet-close aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-      <div class="sheet-body" id="sheet-body"></div>
-      <div class="sheet-foot" id="sheet-foot"></div>
+    <!-- the filter page (phones), laid out like Flipkart's: categories on the left, their options with counts on the right.
+         It sets the controls above, so filtering works exactly as on a wide screen -->
+    <section class="fsheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+      <div class="fs-head">
+        <button class="icon-btn fs-back" type="button" data-sheet-close aria-label="Back to the Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+        <h2 id="sheet-title">Filters</h2>
+        <button class="fs-clear" type="button" data-sheet-clear>Clear all filters</button>
+      </div>
+      <div class="fs-main">
+        <div class="fs-nav" id="fs-nav" role="tablist" aria-orientation="vertical" aria-label="Filter by"></div>
+        <div class="fs-pane" id="sheet-body" role="tabpanel"></div>
+      </div>
+      <div class="fs-foot"><span class="fs-total" id="fs-total"></span><button class="btn primary" type="button" data-sheet-close>Apply</button></div>
     </section>
     <div id="dash-analytics" role="tabpanel" aria-labelledby="tab-analytics" hidden></div>
     <div id="dash-overview" role="tabpanel" aria-labelledby="tab-overview">
