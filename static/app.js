@@ -1407,8 +1407,24 @@ async function init() {
   $("#new-folder").addEventListener("click", () => folderDialog({ title: "Folders", current: S.view.folder, pick: async id => openFolder(id) }));
   $("#folders").addEventListener("click", ev => {
     const open = ev.target.closest("[data-folder-open]"), reset = ev.target.closest("[data-folder-reset]");
-    if (open) openFolder(+open.dataset.folderOpen);
+    if (open) { openFolder(+open.dataset.folderOpen); if (narrow()) setFolders(false, false); }   // a phone's panel gets out of the way
     else if (reset) resetFolder(reset);
+  });
+  /* the ☰ button shows or hides the Folders section: in the sidebar on a wide screen, as a panel under the top bar on a
+     phone. Hidden until asked for; the choice is remembered in this browser */
+  const menu = $("#menu"), narrow = () => matchMedia("(max-width: 860px)").matches;
+  function setFolders(open, remember = true) {
+    document.body.classList.toggle("folders-open", open);
+    menu.setAttribute("aria-expanded", String(open));
+    menu.setAttribute("aria-label", open ? "Hide folders" : "Show folders");
+    if (open && narrow()) $("#side-folders").style.top = `${Math.round($(".sidebar").getBoundingClientRect().bottom)}px`;
+    if (remember) try { localStorage.setItem("invoice-flow-folders", open ? "open" : "closed"); } catch (e) { /* storage blocked */ }
+  }
+  menu.addEventListener("click", () => setFolders(!document.body.classList.contains("folders-open")));
+  try { setFolders(localStorage.getItem("invoice-flow-folders") === "open" && !narrow(), false); } catch (e) { setFolders(false, false); }
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && narrow() && document.body.classList.contains("folders-open")) setFolders(false, false); });
+  document.addEventListener("click", ev => {     // on a phone, a tap outside the panel closes it
+    if (narrow() && document.body.classList.contains("folders-open") && !ev.target.closest("#side-folders, #menu, .modal")) setFolders(false, false);
   });
   $("#folder-pick").addEventListener("change", ev => { S.view.folder = ev.target.value ? +ev.target.value : null; renderFolders(); loadDashboard(); });
   $("#vendor-table").addEventListener("click", async ev => {
@@ -1512,19 +1528,41 @@ async function init() {
 
 /* --------------------------------------------------------------------- login -- */
 function showAuth() {
-  const form = $("#auth-form"), error = $("#auth-error");
+  const login = $("#auth-form"), signup = $("#signup-form");
   $("#auth").hidden = false;
-  const send = async url => {
-    if (!form.reportValidity()) return;
-    error.hidden = true;
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(form))) });
-    if (r.ok) { location.reload(); return; }                  // a fresh page: nothing from another login stays in memory
-    error.textContent = (await r.json().catch(() => ({}))).detail || "Something went wrong. Try again.";
-    error.hidden = false;
+  /* two tabs: Log in, and Create account (username, password, confirm password), which signs straight in */
+  const tab = name => {
+    const creating = name === "signup";
+    login.hidden = creating; signup.hidden = !creating;
+    $$('[role="tab"][data-auth-tab]').forEach(b => b.setAttribute("aria-selected", String(b.dataset.authTab === name)));
+    $("#auth-title").textContent = creating ? "Create your account" : "Sign in to Invoice Flow";
+    $("[name=username]", creating ? signup : login).focus();
   };
-  form.addEventListener("submit", ev => { ev.preventDefault(); send("/api/login"); });
-  $("#signup").addEventListener("click", () => send("/api/signup"));
-  $("[name=username]", form).focus();
+  $$("[data-auth-tab]").forEach(b => b.addEventListener("click", ev => { ev.preventDefault(); tab(b.dataset.authTab); }));
+  const send = async (form, error, url, body) => {
+    error.hidden = true;
+    const button = $("button[type=submit]", form); button.disabled = true;
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (r.ok) { location.hash = ""; location.reload(); return; }   // a fresh page: nothing from another login stays in memory
+      error.textContent = (await r.json().catch(() => ({}))).detail || "Something went wrong. Try again.";
+    } catch (e) { error.textContent = "Couldn't reach the server. Check your connection and try again."; }
+    error.hidden = false; button.disabled = false;
+  };
+  login.addEventListener("submit", ev => {
+    ev.preventDefault();
+    if (!login.reportValidity()) return;
+    const f = Object.fromEntries(new FormData(login));
+    send(login, $("#auth-error"), "/api/login", { username: f.username, password: f.password });
+  });
+  signup.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const f = Object.fromEntries(new FormData(signup)), error = $("#signup-error");
+    if (!signup.reportValidity()) return;
+    if (f.password !== f.confirm) { error.textContent = "The passwords don't match."; error.hidden = false; $("[name=confirm]", signup).focus(); return; }
+    send(signup, error, "/api/signup", { username: f.username, password: f.password, confirm: f.confirm });
+  });
+  tab(location.hash === "#signup" ? "signup" : "login");     // a link to …/#signup opens straight on Create account
 }
 
 async function boot() {

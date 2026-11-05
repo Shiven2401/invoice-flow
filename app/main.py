@@ -910,10 +910,10 @@ def index(google_error: str = ""):
     """The page, with each script and stylesheet link stamped with that file's last change, so a browser never runs
     yesterday's app.js against today's page (the page itself is always re-checked)."""
     html = (config.STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    if auth.google_enabled():  # "Continue with Google" above the username and password form
-        html = html.replace('<form id="auth-form">', '<a class="btn" href="/api/auth/google" style="display:flex;align-items:center;justify-content:center;'
+    if auth.google_enabled():  # "Continue with Google" above the Log in / Create account tabs
+        html = html.replace('<!--google-sign-in-->', '<a class="btn" href="/api/auth/google" style="display:flex;align-items:center;justify-content:center;'
                             f'gap:10px;padding:11px 16px;margin-bottom:12px;text-decoration:none">{GOOGLE_G}<span>Continue with Google</span></a>\n'
-                            '  <p class="hint" style="text-align:center;margin:0 0 14px">or use a username and password</p>\n  <form id="auth-form">', 1)
+                            '  <p class="hint" style="text-align:center;margin:0 0 14px">or use a username and password</p>', 1)
     if google_error:  # a Google sign-in that didn't work comes back here with the reason
         html = html.replace('<p class="auth-error" id="auth-error" role="alert" hidden></p>',
                             f'<p class="auth-error" id="auth-error" role="alert">{escape(google_error[:200])}</p>', 1)

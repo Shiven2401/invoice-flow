@@ -18,11 +18,16 @@
 </svg>
 
 <header class="sidebar">
-  <a class="brand" href="#process" aria-label="Invoice Flow home">
-    <span class="brand-mark" aria-hidden="true">✓</span>
-    <span class="brand-name">Invoice Flow</span>
-  </a>
-  <div class="side-folders">
+  <div class="side-head">
+    <button class="menu-btn" id="menu" type="button" aria-label="Show folders" title="Folders" aria-expanded="false" aria-controls="side-folders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <a class="brand" href="#process" aria-label="Invoice Flow home">
+      <span class="brand-mark" aria-hidden="true">✓</span>
+      <span class="brand-name">Invoice Flow</span>
+    </a>
+  </div>
+  <div class="side-folders" id="side-folders">
     <p class="side-label">Folders</p>
     <button class="folder new-folder" id="new-folder" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h3.6l2 2.5h7.4A1.5 1.5 0 0 1 20 8v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z"/><path d="M12 10.5v5.5M9.25 13.25h5.5"/></svg>
@@ -58,16 +63,27 @@
 </nav>
 
 <section class="auth" id="auth" hidden>
-  <h1>Sign in to Invoice Flow</h1>
+  <h1 id="auth-title">Sign in to Invoice Flow</h1>
   <p class="lede">Your invoices, dashboard and approved vendors are private to your account.</p>
-  <form id="auth-form">
+  <!--google-sign-in-->
+  <div class="auth-tabs" role="tablist" aria-label="Sign in or create an account">
+    <button type="button" role="tab" id="tab-login" data-auth-tab="login" aria-selected="true" aria-controls="auth-form">Log in</button>
+    <button type="button" role="tab" id="tab-signup" data-auth-tab="signup" aria-selected="false" aria-controls="signup-form">Create account</button>
+  </div>
+  <form id="auth-form" role="tabpanel" aria-labelledby="tab-login">
     <label>Username<input type="text" name="username" autocomplete="username" required minlength="3" maxlength="64"></label>
     <label>Password<input type="password" name="password" autocomplete="current-password" required maxlength="200"></label>
     <p class="auth-error" id="auth-error" role="alert" hidden></p>
-    <div class="auth-actions">
-      <button class="btn primary" type="submit">Log in</button>
-      <button class="btn" type="button" id="signup">Create account</button>
-    </div>
+    <button class="btn primary auth-submit" type="submit">Log in</button>
+    <p class="hint">New here? <a href="#signup" data-auth-tab="signup">Create an account</a></p>
+  </form>
+  <form id="signup-form" role="tabpanel" aria-labelledby="tab-signup" hidden>
+    <label>Username<input type="text" name="username" autocomplete="username" required minlength="3" maxlength="64" pattern="[A-Za-z0-9._@+\-]{3,64}"
+      title="3 to 64 letters, numbers or . _ @ + -"></label>
+    <label>Password<input type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+    <label>Confirm password<input type="password" name="confirm" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+    <p class="auth-error" id="signup-error" role="alert" hidden></p>
+    <button class="btn primary auth-submit" type="submit">Create account</button>
     <p class="hint">Passwords need at least 8 characters. There is no password reset yet, so keep yours safe.</p>
   </form>
 </section>

@@ -9,7 +9,7 @@
              tiles are solid ink, mint, yellow and violet blocks. Green / amber /
              red are kept for outcomes only, so they always mean the same thing.
    Type:     Public Sans throughout, tight headings, tabular figures.
-   Shape:    big rounded blocks (22-28px), pill buttons and chips, soft
+   Shape:    square-cornered colour blocks, pill buttons and chips, soft
              shadows. The decision still lands as an ink stamp.
    ------------------------------------------------------------------------ */
 
@@ -42,7 +42,7 @@
   --skip: #9C99AB;
   --shadow: 0 1px 2px rgba(14, 10, 32, .04), 0 6px 20px rgba(14, 10, 32, .05);
   --shadow-lift: 0 2px 6px rgba(14, 10, 32, .06), 0 16px 40px rgba(14, 10, 32, .10);
-  --radius: 22px;
+  --radius: 0px;             /* boxes have square corners; pills (buttons, chips, tabs) stay round */
   --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --serif: var(--sans);
   color-scheme: light;
@@ -776,22 +776,16 @@ table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
   .rbar { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
   .rbar .t { grid-column: 1 / -1; grid-row: 2; }
 }
-/* small screens hide the folder list with the sidebar; its button stays in the top bar and opens the Folders dialog */
-@media (max-width: 860px) {
-  .side-folders { display: flex; flex-direction: row; margin: 0; }
-  .side-folders .side-label, .side-folders .folders { display: none; }
-  .side-folders .new-folder .fname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-}
 
 /* ==================================================================================================================
    Theme: violet #654CF4, ink #0E0A20, yellow #F4CB3D, mint #66C79E, in big rounded blocks on a light grey page
    ================================================================================================================== */
-/* blocks: white, rounded, borderless with a soft shadow (dark pages keep a hairline border) */
-.tally > div, .dash-grid > section, .table-wrap, .viz-card, .rules-col, .rules-more > div, .trail, .verdict, .details,
-.drawer-folder { border-radius: 24px; }
-.filter-bar { border-radius: 22px; }
-.viz-tile, .wz-found > div, .engine, .wz-approval, .wz-folder { border-radius: 18px; }
-.wz-card { border-radius: 28px; }
+/* blocks: white, square-cornered, borderless with a soft shadow (dark pages keep a hairline border).
+   Every box is square; pills (buttons, chips, tabs, badges, the section bar) stay round */
+.tally > div, .dash-grid > section, .table-wrap, .viz-card, .viz-tile, .rules-col, .rules-more > div, .trail, .verdict, .details,
+.drawer-folder, .filter-bar, .wz-found > div, .engine, .wz-approval, .wz-folder, .wz-no-folder, .wz-card, .wz-doc img, .wz-vendor,
+.wz-resume, .detail, .draft, .resolve, .drop, .auth, #auth-form input, #signup-form input, .auth-error, .modal, .drawer, .toast,
+.bill-thumb, .folders li, .folder, .scn-row, .scn, .who, .modal-folder, .modal-create, .modal-out { border-radius: 0; }
 :root:not([data-theme="dark"]) :is(.dash-grid > section, .table-wrap, .filter-bar, .viz-card, .rules-col, .trail, .verdict, .wz-card) { border-color: transparent; }
 
 /* the four figure tiles are solid colour blocks: ink, mint, yellow, violet, each with a soft ring like the cards' line art */
@@ -849,8 +843,69 @@ body.signed-out { background: radial-gradient(420px 420px at 86% 10%, rgba(101, 
 :root[data-theme="dark"] body.signed-out { background: radial-gradient(420px 420px at 86% 10%, rgba(101, 76, 244, .32), transparent 70%),
   radial-gradient(380px 380px at 8% 88%, rgba(244, 203, 61, .16), transparent 70%),
   radial-gradient(360px 360px at 92% 92%, rgba(102, 199, 158, .16), transparent 70%), #0E0A20; }
-.auth { border-radius: 28px; }
 :root[data-theme="dark"] .auth { background: rgba(25, 20, 47, .94); border-color: #2E2750; }
+
+/* sign-in: Log in and Create account as two tabs (an ink pill marks the open one), each a full-width form */
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 20px; padding: 4px; border-radius: 999px; background: var(--band); }
+.auth-tabs button { padding: 9px 12px; border: 0; border-radius: 999px; background: none; font: 600 14px var(--sans); color: var(--ink-2); transition: background .15s, color .15s; }
+.auth-tabs button:hover { color: var(--ink); }
+.auth-tabs button[aria-selected="true"] { background: #0E0A20; color: #FFFFFF; }
+:root[data-theme="dark"] .auth-tabs button[aria-selected="true"] { background: #FFFFFF; color: #0E0A20; }
+#auth-form, #signup-form { margin-top: 18px; }
+#signup-form { display: flex; flex-direction: column; gap: 14px; }
+#signup-form[hidden], #auth-form[hidden] { display: none; }
+#signup-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+#signup-form input { padding: 11px 14px; border: 1px solid var(--rule); border-radius: 12px; font: 400 15px var(--sans); color: var(--ink); background: var(--field); transition: border-color .15s, box-shadow .15s; }
+#signup-form input:focus { outline: none; border-color: var(--pen); box-shadow: 0 0 0 4px rgba(101, 76, 245, .14); }
+.auth-submit { width: 100%; padding: 12px 16px; margin-top: 4px; font-size: 15px; }
+.auth .hint a { color: var(--pen); font-weight: 600; }
+
+/* the ☰ button beside the logo shows or hides the Folders section */
+.side-head { display: flex; align-items: center; gap: 8px; padding: 0 0 6px; }
+.side-head .brand { padding: 4px 4px 4px 2px; }
+.menu-btn { display: grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 12px; background: var(--band); color: var(--ink); transition: background .15s, color .15s; }
+.menu-btn svg { width: 20px; height: 20px; }
+.menu-btn:hover, .menu-btn[aria-expanded="true"] { background: var(--pen-wash); color: var(--pen-ink); }
+.side-folders { display: none; }
+body.folders-open .side-folders { display: flex; animation: wz-in .2s ease both; }
+@media (max-width: 860px) {   /* a phone: the folders drop down as a panel under the top bar */
+  .side-head { padding: 0; }
+  body.folders-open .side-folders { position: fixed; left: 0; right: 0; top: 60px; z-index: 25; flex-direction: column; gap: 2px; margin: 0;
+    padding: 12px 12px 16px; background: var(--side); border-bottom: 1px solid var(--rule); box-shadow: 0 18px 40px rgba(14, 10, 32, .35);
+    max-height: calc(100vh - 90px); overflow-y: auto; }
+  body.folders-open .side-folders .side-label { display: block; }
+  body.folders-open .side-folders .folders { display: block; max-height: none; }
+}
+@media (prefers-reduced-motion: reduce) { body.folders-open .side-folders { animation: none; } }
+
+/* Analytics in the same colour blocks: held yellow, approved mint, rejected ink; the throughput figures violet, ink, mint */
+.viz-tile { border: 0; }
+.viz-tiles:not(.small) .viz-tile:nth-child(1) { background: var(--sun); }
+.viz-tiles:not(.small) .viz-tile:nth-child(2) { background: var(--mint); }
+.viz-tiles:not(.small) .viz-tile:nth-child(3) { background: #0E0A20; }
+.viz-tiles.small .viz-tile:nth-child(1) { background: #654CF4; }
+.viz-tiles.small .viz-tile:nth-child(2) { background: #0E0A20; }
+.viz-tiles.small .viz-tile:nth-child(3) { background: var(--mint); }
+.viz-tiles:not(.small) .viz-tile:nth-child(-n+2), .viz-tiles.small .viz-tile:nth-child(3) { color: #0E0A20; }
+.viz-tiles:not(.small) .viz-tile:nth-child(-n+2) :is(.v, .s), .viz-tiles.small .viz-tile:nth-child(3) :is(.v, .s) { color: #0E0A20; }
+.viz-tiles:not(.small) .viz-tile:nth-child(-n+2) .s, .viz-tiles.small .viz-tile:nth-child(3) .s { color: rgba(14, 10, 32, .74); }
+.viz-tiles:not(.small) .viz-tile:nth-child(3) .v, .viz-tiles.small .viz-tile:nth-child(-n+2) .v { color: #FFFFFF; }
+.viz-tiles:not(.small) .viz-tile:nth-child(3) .s, .viz-tiles.small .viz-tile:nth-child(-n+2) .s { color: rgba(255, 255, 255, .78); }
+.viz-tiles:not(.small) .viz-tile .mini { background: rgba(255, 255, 255, .55); border-color: currentColor; color: #0E0A20; }
+.viz-tiles:not(.small) .viz-tile:nth-child(3) .mini { background: rgba(255, 255, 255, .12); color: #FFFFFF; }
+:root[data-theme="dark"] .viz-tiles:not(.small) .viz-tile:nth-child(3), :root[data-theme="dark"] .viz-tiles.small .viz-tile:nth-child(2) {
+  background: #FFFFFF; }                                           /* on an ink page the ink block turns white */
+:root[data-theme="dark"] .viz-tiles:not(.small) .viz-tile:nth-child(3) :is(.v, .mini),
+:root[data-theme="dark"] .viz-tiles.small .viz-tile:nth-child(2) .v { color: #0E0A20; }
+:root[data-theme="dark"] .viz-tiles:not(.small) .viz-tile:nth-child(3) .s,
+:root[data-theme="dark"] .viz-tiles.small .viz-tile:nth-child(2) .s { color: rgba(14, 10, 32, .7); }
+/* the Daily / Monthly / Yearly switch: pills, the chosen one in ink */
+.seg { gap: 4px; padding: 4px; border: 0; border-radius: 999px; background: var(--band); }
+.seg button { border-radius: 999px; padding: 6px 14px; font-weight: 600; }
+.seg button + button { border-left: 0; }
+.seg button[aria-pressed="true"] { background: #0E0A20; color: #FFFFFF; }
+:root[data-theme="dark"] .seg button[aria-pressed="true"] { background: #FFFFFF; color: #0E0A20; }
+.viz-tip { background: #0E0A20; }
 
 /* "or choose a whole folder" under the drop zone: the folder picker uploads every PDF and photo in it */
 .drop-folder { display: flex; justify-content: center; margin-top: 10px; }

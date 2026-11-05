@@ -90,6 +90,8 @@ def signup(request: Request, response: Response, body: dict = Body(...)):
         raise HTTPException(400, "Usernames are 3 to 64 letters, numbers or . _ @ + -")
     if not 8 <= len(password) <= 200:
         raise HTTPException(400, "Passwords need at least 8 characters.")
+    if "confirm" in body and str(body.get("confirm") or "") != password:  # the Create account form sends it; the API alone may not
+        raise HTTPException(400, "The passwords don't match.")
     _record(key)
     user_id = db.create_user(username, hash_password(password))
     if user_id is None:
