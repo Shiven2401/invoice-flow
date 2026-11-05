@@ -1,11 +1,12 @@
 /* ------------------------------------------------------------------------
    Design notes
-   Layout:   a chat-app shell. A navy sidebar holds navigation and the
+   Layout:   a chat-app shell. An emerald sidebar holds navigation and the
              account; the workspace on the right is white and roomy.
-   Palette:  Emerald Green: navy #081C2D for text and structure, emerald
-             #1F7A63 for anything you can act on, soft white #F5F7FA panels,
-             cool gray #9AA3A8 for quiet detail. Green / amber / red are kept
-             for outcomes only, so a colour always means the same thing.
+   Palette:  Emerald Green. Emerald #1F7A63 is the primary colour: the sidebar,
+             the lead figure and anything you can act on. Navy #081C2D comes
+             second: text, the section bar, the dark theme. Soft white #F5F7FA
+             panels, cool gray #9AA3A8 for quiet detail. Green / amber / red are
+             kept for outcomes only, so a colour always means the same thing.
    Type:     Public Sans throughout, tight headings, tabular figures.
    Shape:    pill buttons and chips, square data boxes, soft navy-tinted
              shadows. The decision still lands as an ink stamp.
@@ -270,7 +271,7 @@ body.signed-out { min-height: 100vh; display: grid; place-items: center; padding
 .wz-actions .btn { padding: 10px 20px; }
 .wz-decide .wz-actions { margin-top: 12px; }
 .wz-new { text-align: center; padding: 48px 34px; }
-.wz-new h1 { font-size: 30px; background: linear-gradient(90deg, #081C2D, #145443 45%, #1F7A63); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wz-new h1 { font-size: 30px; background: linear-gradient(90deg, #1F7A63, #17614F 55%, #081C2D); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .wz-new .lede { margin: 8px auto 28px !important; }
 .wz-new .drop { max-width: 520px; margin: 0 auto; padding: 44px 24px; }
 .demo-only { display: none; }
@@ -452,7 +453,7 @@ details.fold > summary { cursor: pointer; font-weight: 600; font-size: 14px; col
 .lede { color: var(--ink-2); max-width: 64ch; margin-top: 8px !important; }
 .tally { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .tally > div { padding: 18px 20px; border: 1px solid var(--rule); border-radius: 16px; background: var(--paper-2); box-shadow: var(--shadow); }
-.tally > div:first-child { background: linear-gradient(135deg, #081C2D 0%, #0F3B47 55%, #1F7A63 100%); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(8, 28, 45, .28); }
+.tally > div:first-child { background: linear-gradient(135deg, #24896F 0%, #1F7A63 50%, #145443 100%); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(31, 122, 99, .3); }
 .tally > div:first-child .l, .tally > div:first-child .s { color: rgba(255, 255, 255, .85); }
 .tally .v { font: 700 32px/1.1 var(--sans); letter-spacing: -.03em; }
 .tally .l { color: var(--ink-2); font-size: 14px; font-weight: 500; margin-top: 6px; }
@@ -779,14 +780,18 @@ table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
   .side-folders .new-folder .fname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
-/* light theme: a navy sidebar, like the brand card. It gets its own tokens, so everything in it reads light on navy */
-:root:not([data-theme="dark"]) .sidebar {
-  --side: #081C2D; --paper-2: #0E2638; --field: #0E2638; --band: #12304A; --rule: #1C3A52; --rule-soft: #15304A;
-  --ink: #F5F7FA; --ink-2: #B4BEC5; --skip: #8A979F;
-  --pen: #2FA383; --pen-ink: #8ED9C1; --pen-wash: rgba(47, 163, 131, .18);
-  --bad: #F2766E; --bad-wash: rgba(242, 118, 110, .16);
+/* Emerald is the primary colour, navy the second. The sidebar (the top bar on a phone) is emerald, with its own tokens
+   so everything in it reads white on emerald; the logo and avatar on it are navy */
+.sidebar {
+  --side: #1F7A63; --paper-2: #17614F; --field: #17614F; --band: rgba(255, 255, 255, .1); --rule: #2E8C74; --rule-soft: #2A8670;
+  --ink: #FFFFFF; --ink-2: #E3F3EE; --skip: #E3F3EE;
+  --pen: #FFFFFF; --pen-ink: #FFFFFF; --pen-wash: rgba(255, 255, 255, .18);
+  --bad: #FFD9D4; --bad-wash: rgba(179, 38, 30, .55);
   color: var(--ink);
 }
+:root[data-theme="dark"] .sidebar { --side: #0B2E27; --paper-2: #0F3A31; --field: #0F3A31; --rule: #1B4A3F; --rule-soft: #164237; }
+.sidebar .brand-mark, .sidebar .avatar { background: #081C2D; box-shadow: 0 2px 8px rgba(8, 28, 45, .3); }
+.sidebar .theme-switch button[aria-checked="true"] { background: #FFFFFF; color: #17614F; }
 
 /* boxes that show data have square corners (buttons, tabs and pills stay rounded) */
 .tally > div, .dash-grid > section, .table-wrap, .filter-bar, .viz-card, .viz-tile, .rules-col, .rules-more > div,
