@@ -792,20 +792,34 @@ table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
 .tally > div { position: relative; overflow: hidden; border: 0; box-shadow: none; }
 .tally > div::after { content: ""; position: absolute; top: -46px; right: -46px; width: 150px; height: 150px; border-radius: 50%;
   border: 20px solid rgba(255, 255, 255, .12); pointer-events: none; }
-.tally > div:nth-child(1) { background: #0E0A20; color: #FFFFFF; }
-.tally > div:nth-child(2) { background: var(--mint); color: #0E0A20; }
-.tally > div:nth-child(3) { background: var(--sun); color: #0E0A20; }
-.tally > div:nth-child(4) { background: var(--pen); color: #FFFFFF; }
-.tally > div:nth-child(1) .l, .tally > div:nth-child(1) .s { color: rgba(255, 255, 255, .74); }
-.tally > div:nth-child(4) .l, .tally > div:nth-child(4) .s { color: rgba(255, 255, 255, .84); }
-.tally > div:nth-child(2) .l, .tally > div:nth-child(2) .s, .tally > div:nth-child(3) .l, .tally > div:nth-child(3) .s { color: rgba(14, 10, 32, .74); }
-.tally > div:nth-child(2)::after, .tally > div:nth-child(3)::after { border-color: rgba(14, 10, 32, .07); }
+/* coloured by meaning: count ink, straight-through white, approved money mint, held money yellow, waiting violet */
+.tally > div.tile-count { background: #0E0A20; color: #FFFFFF; box-shadow: none; }
+.tally > div.tile-auto { background: var(--paper-2); color: var(--ink); }
+.tally > div.tile-paid { background: var(--mint); color: #0E0A20; }
+.tally > div.tile-held-amount { background: var(--sun); color: #0E0A20; }
+.tally > div.tile-held { background: var(--pen); color: #FFFFFF; }
+.tally > div.tile-count :is(.l, .s) { color: rgba(255, 255, 255, .74); }
+.tally > div.tile-held :is(.l, .s) { color: rgba(255, 255, 255, .84); }
+.tally > div:is(.tile-paid, .tile-held-amount) :is(.l, .s) { color: rgba(14, 10, 32, .74); }
+.tally > div.tile-auto :is(.l, .s) { color: var(--ink-2); }
+.tally > div:is(.tile-paid, .tile-held-amount, .tile-auto)::after { border-color: rgba(14, 10, 32, .06); }
+.tally .tile-go-host { position: relative; }
 .tally .tile-go { z-index: 1; background: rgba(255, 255, 255, .2); border-color: transparent; color: #FFFFFF; }
 .tally .tile-go:hover { background: #FFFFFF; border-color: #FFFFFF; color: var(--pen); }
-:root[data-theme="dark"] .tally > div:nth-child(1) { background: #FFFFFF; color: #0E0A20; }   /* on an ink page the ink tile turns white */
-:root[data-theme="dark"] .tally > div:nth-child(1) .l, :root[data-theme="dark"] .tally > div:nth-child(1) .s { color: rgba(14, 10, 32, .7); }
-:root[data-theme="dark"] .tally > div:nth-child(1)::after { border-color: rgba(14, 10, 32, .06); }
-:root[data-theme="dark"] .tally > div:nth-child(4) { background: #654CF4; }
+.tally .tile-held-amount .tile-go { background: rgba(14, 10, 32, .1); color: #0E0A20; }
+.tally .tile-held-amount .tile-go:hover { background: #0E0A20; border-color: #0E0A20; color: var(--sun); }
+:root[data-theme="dark"] .tally > div.tile-count { background: #FFFFFF; color: #0E0A20; }   /* on an ink page the ink tile turns white */
+:root[data-theme="dark"] .tally > div.tile-count :is(.l, .s) { color: rgba(14, 10, 32, .7); }
+:root[data-theme="dark"] .tally > div.tile-count::after { border-color: rgba(14, 10, 32, .06); }
+:root[data-theme="dark"] .tally > div.tile-auto { border: 1px solid var(--rule); }
+:root[data-theme="dark"] .tally > div.tile-held { background: #654CF4; }   /* the lighter violet would be too faint behind white text */
+:root[data-theme="dark"] .tally > div.tile-auto::after { border-color: rgba(255, 255, 255, .06); }
+/* five blocks: one row on a wide screen (the figures sized so a crore fits), two a row on a tablet, one on a phone */
+.tally { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tally .v { font-size: clamp(22px, 0.9vw + 13px, 28px); }
+.tally .v.v-long { font-size: clamp(19px, 0.6vw + 13px, 23px); }
+@media (max-width: 1100px) { .tally { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tally > div:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+@media (max-width: 480px) { .tally { grid-template-columns: minmax(0, 1fr); } }
 
 /* the sidebar (the top bar on a phone) is an ink block; yellow marks what is selected in it */
 .sidebar {

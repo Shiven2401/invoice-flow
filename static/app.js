@@ -1010,13 +1010,18 @@ async function loadDashboard() {
   renderPeriods();
   const st = await api(`/api/stats${scope()}`);
   const c = st.counts;
+  const toHeld = label => c.HOLD ? `<button class="tile-go" type="button" data-show-held aria-label="${label}" title="Show held invoices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : "";
+  const heldN = `${c.HOLD} held invoice${c.HOLD === 1 ? "" : "s"}`;
+  const money = v => { const s = inr0(v); return `<div class="v${s.length > 11 ? " v-long" : ""}">${s}</div>`; };   // tens of crores get a smaller figure
   $("#tally").innerHTML = `
-    <div><div class="v">${st.total}</div><div class="l">Invoices processed</div><div class="s">${st.avg_seconds}s average per invoice</div></div>
-    <div><div class="v">${st.straight_through}%</div><div class="l">Approved with no human touch</div><div class="s">${c.APPROVE} approved in total</div></div>
-    <div><div class="v">${inr0(st.approved_value)}</div><div class="l">Approved for payment</div><div class="s">gross, including GST</div></div>
-    <div class="tile-held"><div class="v">${c.HOLD}</div><div class="l">Waiting for a person</div><div class="s">${inr0(st.pending_value)} on hold</div>
-      ${c.HOLD ? `<button class="tile-go" type="button" data-show-held aria-label="Show the ${c.HOLD} held invoice${c.HOLD === 1 ? "" : "s"}" title="Show held invoices">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>` : ""}</div>`;
+    <div class="tile-count"><div class="v">${st.total}</div><div class="l">Invoices processed</div><div class="s">${st.avg_seconds}s average per invoice</div></div>
+    <div class="tile-auto"><div class="v">${st.straight_through}%</div><div class="l">Approved with no human touch</div><div class="s">${c.APPROVE} approved in total</div></div>
+    <div class="tile-paid">${money(st.approved_value)}<div class="l">Approved for payment</div><div class="s">gross, including GST</div></div>
+    <div class="tile-held-amount tile-go-host">${money(st.pending_value)}<div class="l">Held for payment</div>
+      <div class="s">${c.HOLD ? `in ${heldN}, gross, including GST` : "nothing is on hold"}</div>${toHeld(`Show the ${heldN}, ${inr0(st.pending_value)} in all`)}</div>
+    <div class="tile-held tile-go-host"><div class="v">${c.HOLD}</div><div class="l">Waiting for a person</div><div class="s">${inr0(st.pending_value)} on hold</div>
+      ${toHeld(`Show the ${heldN}`)}</div>`;
   const tot = Math.max(st.total, 1);
   $("#split").innerHTML = st.total ? `<div class="split" role="img" aria-label="${c.APPROVE} approved, ${c.HOLD} held">
       <i class="ok" style="width:${c.APPROVE / tot * 100}%"></i><i class="warn" style="width:${c.HOLD / tot * 100}%"></i></div>
