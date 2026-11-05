@@ -1663,6 +1663,7 @@ async function init() {
   window.addEventListener("hashchange", route);
   loadView();
   route();
+  if (window.Guide) Guide.maybeStart();   // Shiven's tour, the first time someone signs in to an empty account
 }
 
 /* --------------------------------------------------------------------- login -- */

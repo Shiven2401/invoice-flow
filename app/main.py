@@ -918,7 +918,7 @@ def index(google_error: str = ""):
     if google_error:  # a Google sign-in that didn't work comes back here with the reason
         html = html.replace('<p class="auth-error" id="auth-error" role="alert" hidden></p>',
                             f'<p class="auth-error" id="auth-error" role="alert">{escape(google_error[:200])}</p>', 1)
-    for name in ("app.css", "app.js", "theme.js"):
+    for name in ("app.css", "app.js", "theme.js", "guide.js"):
         html = html.replace(f"/static/{name}\"", f"/static/{name}?v={int((config.STATIC_DIR / name).stat().st_mtime)}\"")
     return Response(html, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})
 
