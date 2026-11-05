@@ -1067,6 +1067,7 @@ function renderHistory() {
   $("#history").innerHTML = `<thead><tr><th>Invoice date</th><th>File</th><th>Vendor</th><th>Invoice no.</th><th>PO</th><th class="right">Total</th><th>Outcome</th><th>Why</th><th>Read by</th><th aria-label="Remove"></th></tr></thead>
     ${rows.length ? keys.map(k => historyGroup(k, byKey.get(k))).join("")
       : `<tbody><tr><td class="empty-row" colspan="10">${S.history.length ? "No invoices match these filters." : "No invoices yet."}</td></tr></tbody>`}`;
+  if (document.body.classList.contains("sheet-open")) renderSheet();   // the phone's filter page shows the new counts and total
 }
 
 /* --------------------------------------------------------------- analytics -- */
@@ -1417,6 +1418,12 @@ function fsRows() {                                // the invoices in view for t
   return S.history.filter(r => r.status === "done" && (!p || (r.invoice_date || "").startsWith(p)));
 }
 function renderSheet(tab = fsTab) {
+  const active = document.activeElement, inSheet = active && active.closest && active.closest("#sheet");
+  const refocus = inSheet && active.name ? `#sheet-body input[name="${active.name}"]:checked` : inSheet && active.dataset.fsTab ? `[data-fs-tab="${active.dataset.fsTab}"]` : null;
+  drawSheet(tab);
+  if (refocus && $(refocus)) $(refocus).focus();          // a redraw keeps keyboard focus where it was
+}
+function drawSheet(tab) {
   const tabs = FS_TABS.filter(([k]) => !onAnalytics() || k === "folder" || k === "dated");
   if (!tabs.some(([k]) => k === tab)) tab = tabs[0][0];
   fsTab = tab;
