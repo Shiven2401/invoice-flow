@@ -1387,8 +1387,31 @@ function refreshVisible() {
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
 }
 
+/* ---------------------------------------------------------------- folders menu -- */
+/* the ☰ button shows or hides the Folders section: in the sidebar on a wide screen, as a panel under the top bar on a
+   phone. Hidden until asked for; the choice is remembered in this browser. Wired before init's first request, so the
+   button works at once, even while a slow connection is still loading the page */
+const narrow = () => matchMedia("(max-width: 860px)").matches;
+function setFolders(open, remember = true) {
+  const menu = $("#menu");
+  document.body.classList.toggle("folders-open", open);
+  menu.setAttribute("aria-expanded", String(open));
+  menu.setAttribute("aria-label", open ? "Hide folders" : "Show folders");
+  if (open && narrow()) $("#side-folders").style.top = `${Math.round($(".sidebar").getBoundingClientRect().bottom)}px`;
+  if (remember) try { localStorage.setItem("invoice-flow-folders", open ? "open" : "closed"); } catch (e) { /* storage blocked */ }
+}
+function wireMenu() {
+  $("#menu").addEventListener("click", () => setFolders(!document.body.classList.contains("folders-open")));
+  try { setFolders(localStorage.getItem("invoice-flow-folders") === "open" && !narrow(), false); } catch (e) { setFolders(false, false); }
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && narrow() && document.body.classList.contains("folders-open")) setFolders(false, false); });
+  document.addEventListener("click", ev => {     // on a phone, a tap outside the panel closes it
+    if (narrow() && document.body.classList.contains("folders-open") && !ev.target.closest("#side-folders, #menu, .modal")) setFolders(false, false);
+  });
+}
+
 /* --------------------------------------------------------------------- init -- */
 async function init() {
+  wireMenu();
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
@@ -1409,22 +1432,6 @@ async function init() {
     const open = ev.target.closest("[data-folder-open]"), reset = ev.target.closest("[data-folder-reset]");
     if (open) { openFolder(+open.dataset.folderOpen); if (narrow()) setFolders(false, false); }   // a phone's panel gets out of the way
     else if (reset) resetFolder(reset);
-  });
-  /* the ☰ button shows or hides the Folders section: in the sidebar on a wide screen, as a panel under the top bar on a
-     phone. Hidden until asked for; the choice is remembered in this browser */
-  const menu = $("#menu"), narrow = () => matchMedia("(max-width: 860px)").matches;
-  function setFolders(open, remember = true) {
-    document.body.classList.toggle("folders-open", open);
-    menu.setAttribute("aria-expanded", String(open));
-    menu.setAttribute("aria-label", open ? "Hide folders" : "Show folders");
-    if (open && narrow()) $("#side-folders").style.top = `${Math.round($(".sidebar").getBoundingClientRect().bottom)}px`;
-    if (remember) try { localStorage.setItem("invoice-flow-folders", open ? "open" : "closed"); } catch (e) { /* storage blocked */ }
-  }
-  menu.addEventListener("click", () => setFolders(!document.body.classList.contains("folders-open")));
-  try { setFolders(localStorage.getItem("invoice-flow-folders") === "open" && !narrow(), false); } catch (e) { setFolders(false, false); }
-  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && narrow() && document.body.classList.contains("folders-open")) setFolders(false, false); });
-  document.addEventListener("click", ev => {     // on a phone, a tap outside the panel closes it
-    if (narrow() && document.body.classList.contains("folders-open") && !ev.target.closest("#side-folders, #menu, .modal")) setFolders(false, false);
   });
   $("#folder-pick").addEventListener("change", ev => { S.view.folder = ev.target.value ? +ev.target.value : null; renderFolders(); loadDashboard(); });
   $("#vendor-table").addEventListener("click", async ev => {
