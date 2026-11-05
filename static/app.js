@@ -59,6 +59,7 @@ function renderFolders() {
     : `<li class="folders-empty">Save an invoice to a folder at its Decision step, or create one here.</li>`;
   $("#folder-pick").innerHTML = `<option value="">All invoices</option>${S.folders.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join("")}`;
   $("#folder-pick").value = S.view.folder ?? "";
+  updateFilterCount();
 }
 
 async function createFolder(name) {
@@ -997,6 +998,7 @@ function renderPeriods() {
   pick.innerHTML = options.length ? options.map(o => `<option value="${o}">${yearly ? o : monthName(o)}</option>`).join("") : `<option value="">No dated invoices yet</option>`;
   pick.value = S.view.pick;
   $("#export").href = `/api/export.xlsx${scope()}`;
+  updateFilterCount();
 }
 
 async function loadDashboard() {
@@ -1052,6 +1054,7 @@ function renderHistory() {
   const rows = done.filter(r => (S.filter === "ALL" || eff(r) === S.filter) && (r.invoice_date || "").startsWith(p) && found(r))
     .sort((a, b) => (b.invoice_date || "").localeCompare(a.invoice_date || ""));  // newest first, undated last
   $$("#filters .chip").forEach(b => b.classList.toggle("on", b.dataset.f === S.filter));
+  updateFilterCount();
   $("#history-count").textContent = `${rows.length} invoice${rows.length === 1 ? "" : "s"}${S.filter === "ALL" ? "" : `, ${DEC[S.filter].label.toLowerCase()}`}`;
 
   const undated = p ? done.filter(r => !r.invoice_date).length : 0, note = $("#undated");
@@ -1263,6 +1266,7 @@ function dashTab(name) {
   $$("[data-dash-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.dashTab === name)));
   $("#dash-overview").hidden = name !== "overview";
   $("#filter-bar").classList.toggle("on-analytics", name === "analytics");   // the History filters have nothing to filter there
+  updateFilterCount();
   $("#dash-analytics").hidden = name !== "analytics";
   if (name === "analytics") loadAnalytics();
 }
@@ -1387,6 +1391,79 @@ function refreshVisible() {
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
 }
 
+/* ------------------------------------------------------------ sort and filter sheet -- */
+/* On a phone the Dashboard's filter bar is one line that slides sideways, as on Flipkart: search, Sort, Filter and the
+   outcome chips. Sort and Filter open a sheet from the bottom. The sheet only sets the bar's own controls and fires their
+   change events, so every filter behaves exactly as it does on a wide screen */
+const onAnalytics = () => $("#filter-bar").classList.contains("on-analytics");
+function updateFilterCount() {
+  const badge = $("#filter-count"); if (!badge) return;
+  const n = [S.view.folder != null, S.view.kind !== "all", !onAnalytics() && S.filter !== "ALL"].filter(Boolean).length;
+  badge.hidden = !n; badge.textContent = n;
+}
+function sheetOptions(name, options, current) {
+  return options.map(([value, label]) => `<label class="sheet-opt"><span>${esc(label)}</span>
+    <input type="radio" name="${name}" value="${esc(value)}" ${String(value) === String(current) ? "checked" : ""}></label>`).join("");
+}
+const selectOptions = sel => [...sel.options].filter(o => !o.disabled).map(o => [o.value, o.textContent]);
+function renderSheet(kind) {
+  const body = $("#sheet-body"), foot = $("#sheet-foot");
+  $("#sheet").dataset.kind = kind;
+  if (kind === "sort") {
+    $("#sheet-title").textContent = "Sort by";
+    body.innerHTML = sheetOptions("group", selectOptions($("#group-by")), $("#group-by").value);
+    foot.innerHTML = "";
+    return;
+  }
+  $("#sheet-title").textContent = "Filters";
+  const pick = $("#period-pick");
+  body.innerHTML = `<h3 class="sheet-h">Folder</h3>${sheetOptions("folder", selectOptions($("#folder-pick")), $("#folder-pick").value)}
+    <h3 class="sheet-h">Dated</h3>${sheetOptions("kind", selectOptions($("#period-kind")), $("#period-kind").value)}
+    ${!pick.hidden && !pick.disabled ? `<h3 class="sheet-h">${S.view.kind === "year" ? "Year" : "Month"}</h3>${sheetOptions("pick", selectOptions(pick), pick.value)}` : ""}
+    ${onAnalytics() ? "" : `<h3 class="sheet-h">Outcome</h3>${sheetOptions("outcome", $$("#filters .chip").map(c => [c.dataset.f, c.textContent]), S.filter)}`}`;
+  foot.innerHTML = `<button class="btn" type="button" data-sheet-clear>Clear all</button><button class="btn primary" type="button" data-sheet-close>Show results</button>`;
+}
+function openSheet(kind) {
+  renderSheet(kind);
+  $("#sheet").hidden = false; $("#sheet-scrim").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("sheet-open"));
+  ($("#sheet-body input:checked") || $("#sheet-body input") || $("[data-sheet-close]")).focus();
+}
+function closeSheet() {
+  if ($("#sheet").hidden) return;
+  document.body.classList.remove("sheet-open");
+  $("#sheet-scrim").hidden = true;
+  setTimeout(() => { if (!document.body.classList.contains("sheet-open")) $("#sheet").hidden = true; }, 250);
+  const opener = $(`[data-sheet="${$("#sheet").dataset.kind}"]`); if (opener) opener.focus();
+}
+function setControl(sel, value) {       // as if the person had picked it in the bar
+  const el = $(sel); if (!el || el.value === value) return;
+  el.value = value; el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+function wireSheet() {
+  $("#filter-bar").addEventListener("click", ev => { const b = ev.target.closest("[data-sheet]"); if (b) openSheet(b.dataset.sheet); });
+  $("#sheet-scrim").addEventListener("click", closeSheet);
+  $("#sheet").addEventListener("click", ev => {
+    if (ev.target.closest("[data-sheet-close]")) { closeSheet(); return; }
+    if (ev.target.closest("[data-sheet-clear]")) {
+      setControl("#folder-pick", ""); setControl("#period-kind", "all");
+      if (S.filter !== "ALL") $('#filters [data-f="ALL"]').click();
+      setTimeout(() => renderSheet("filter"), 350);
+    }
+  });
+  $("#sheet").addEventListener("change", ev => {
+    const r = ev.target; if (r.type !== "radio") return;
+    if (r.name === "group") { setControl("#group-by", r.value); closeSheet(); return; }   // sorting is one choice: done
+    if (r.name === "folder") setControl("#folder-pick", r.value);
+    if (r.name === "kind") setControl("#period-kind", r.value);
+    if (r.name === "pick") setControl("#period-pick", r.value);
+    if (r.name === "outcome") $(`#filters [data-f="${r.value}"]`).click();
+    setTimeout(() => { if (document.body.classList.contains("sheet-open")) { renderSheet("filter"); const again = $(`#sheet-body input[name="${r.name}"]:checked`); if (again) again.focus(); } }, 350);
+    updateFilterCount();
+  });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeSheet(); });
+}
+
 /* ------------------------------------------------------------------ sidebar menu -- */
 /* the ☰ button, as on YouTube. On a wide screen it switches the sidebar sideways between full (labels and folders) and a
    narrow rail of icons, which leaves the page, and the upload, as much width as possible; the rail is where it starts, and
@@ -1423,6 +1500,7 @@ function wireMenu() {
 /* --------------------------------------------------------------------- init -- */
 async function init() {
   wireMenu();
+  wireSheet();
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";

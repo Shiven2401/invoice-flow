@@ -108,8 +108,17 @@
     </div>
     <!-- every filter in one place: folder and period scope the whole Dashboard, the rest only the History table -->
     <div class="filter-bar" id="filter-bar" role="group" aria-label="Filters">
+      <!-- on a phone, as on Flipkart: Sort and Filter open sheets, and the bar is one line that slides sideways -->
+      <div class="f-mobile">
+        <button class="fm-btn history-only" type="button" data-sheet="sort" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5"/></svg>
+          <span>Sort</span></button>
+        <button class="fm-btn" type="button" data-sheet="filter" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5h17l-6.5 8v5.5l-4 2V13z"/></svg>
+          <span>Filter</span><b class="fm-count" id="filter-count" hidden></b></button>
+      </div>
       <label class="f f-folder"><span>Folder</span><select id="folder-pick"></select></label>
-      <div class="f">
+      <div class="f f-dated">
         <label for="period-kind">Dated</label>
         <select id="period-kind">
           <option value="all">All time</option>
@@ -118,14 +127,14 @@
         </select>
         <select id="period-pick" aria-label="Which month or year" hidden></select>
       </div>
-      <div class="f history-only"><span id="outcome-label">Outcome</span>
+      <div class="f f-outcome history-only"><span id="outcome-label">Outcome</span>
         <div class="chips" id="filters" role="group" aria-labelledby="outcome-label">
           <button class="chip on" data-f="ALL">All</button>
           <button class="chip" data-f="APPROVE">Approved</button>
           <button class="chip" data-f="HOLD">Held</button>
         </div>
       </div>
-      <label class="f history-only"><span>Group by</span>
+      <label class="f f-group history-only"><span>Group by</span>
         <select id="group-by">
           <option value="date">Date</option>
           <option value="month">Month</option>
@@ -140,6 +149,15 @@
       </label>
       <input type="search" class="f-search history-only" id="history-search" placeholder="Find invoice, vendor, PO or file" aria-label="Find an invoice">
     </div>
+    <!-- the Sort and Filter sheet (phones): it sets the controls above, so filtering works exactly as on a wide screen -->
+    <div class="sheet-scrim" id="sheet-scrim" hidden></div>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+      <div class="sheet-head"><h2 id="sheet-title">Sort by</h2>
+        <button class="icon-btn sheet-close" type="button" data-sheet-close aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="sheet-body" id="sheet-body"></div>
+      <div class="sheet-foot" id="sheet-foot"></div>
+    </section>
     <div id="dash-analytics" role="tabpanel" aria-labelledby="tab-analytics" hidden></div>
     <div id="dash-overview" role="tabpanel" aria-labelledby="tab-overview">
       <div class="tally" id="tally"></div>
