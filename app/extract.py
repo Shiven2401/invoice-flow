@@ -113,8 +113,12 @@ def _second_look(page, boxes):
     return boxes
 
 
+DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")   # Hindi bills often write dates and amounts this way
+
+
 def tidy_ocr(text):
     """Writing on a dotted fill-in line comes back with the dots: 'Date:30..-06-26', 'M/s......Ravi'."""
+    text = text.translate(DEVANAGARI_DIGITS)
     text = re.sub(r"(?<=[\dA-Za-z])\.{2,}(?=[-/]\d)|(?<=\d[-/])\.{2,}(?=\d)", "", text)   # beside a date's dash
     # in place of one: 30..06-26, 30-06..26
     text = re.sub(r"\b(\d{1,2})\.{2,}(\d{1,2})([-/])(\d{2,4})\b", r"\1\3\2\3\4", text)
@@ -126,8 +130,33 @@ def _anthropic_key():
     return os.getenv("ANTHROPIC_API_KEY", "").strip()
 
 
+_gemini_rejected = [None]   # why Google refused the GEMINI_API_KEY, once it has; then documents go to the built-in reader
+
+
+def _note_gemini_reply(r):
+    """Remember a refused key (401/403, or 400 naming the key), so the app stops sending documents with it and says so."""
+    if r.status_code in (401, 403) or (r.status_code == 400 and "API_KEY" in r.text):
+        if not _gemini_rejected[0]:
+            logger.warning("Google rejected the GEMINI_API_KEY ({}) - reading with the built-in rules and OCR", r.status_code)
+        _gemini_rejected[0] = f"Google rejected the GEMINI_API_KEY ({r.status_code}): check it at aistudio.google.com/apikey"
+
+
+def check_gemini_key():
+    """At startup: one cheap request, so a bad key shows on the page before anyone uploads. Network trouble proves nothing."""
+    if not config.GEMINI_API_KEY:
+        return
+    try:
+        import requests
+        _note_gemini_reply(requests.get("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+                                        headers={"x-goog-api-key": config.GEMINI_API_KEY}, timeout=15))
+    except Exception as e:
+        logger.info("could not check the Gemini key at startup ({})", type(e).__name__)
+
+
 def llm_key_problem():
-    """Why the ANTHROPIC_API_KEY that is set can't be used, or None (also None when there is none, or Gemini is used)."""
+    """Why the model key that is set can't be used, or None (also None when there is none)."""
+    if config.GEMINI_API_KEY and _gemini_rejected[0]:
+        return _gemini_rejected[0]
     key = _anthropic_key()
     if key and not key.startswith("sk-ant-") and not config.GEMINI_API_KEY:
         return "ANTHROPIC_API_KEY doesn't look like an Anthropic key (those start with 'sk-ant-'), so Claude is not used"
@@ -137,7 +166,7 @@ def llm_key_problem():
 def llm_provider():
     """('Gemini' | 'Claude', model id) for the vision model that reads documents, or (None, None)."""
     if config.GEMINI_API_KEY:
-        return "Gemini", config.GEMINI_MODEL
+        return ("Gemini", config.GEMINI_MODEL) if not _gemini_rejected[0] else (None, None)
     # a key from another provider would only be refused, after sending the invoice images out with it
     if _anthropic_key().startswith("sk-ant-"):
         return "Claude", config.EXTRACT_MODEL
@@ -297,7 +326,7 @@ def to_num(s):
         return None
     if isinstance(s, (int, float)):
         return float(s)
-    s = re.sub(r"[^\d.]", "", str(s).replace(",", ""))
+    s = re.sub(r"[^\d.]", "", str(s).translate(DEVANAGARI_DIGITS).replace(",", ""))
     try:
         return float(s) if s not in ("", ".") else None
     except ValueError:
@@ -316,7 +345,7 @@ def parse_date(s):
     """Return ISO date or None. Day-first (Indian convention) for ambiguous numeric dates."""
     if not s:
         return None
-    s = str(s).strip()
+    s = str(s).strip().translate(DEVANAGARI_DIGITS)
     pats = [
         (r"\b(\d{4})-(\d{2})-(\d{2})\b", "ymd"),
         (r"\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})(?:\b|(?=\d{1,2}:\d{2}))", "dmy"),  # OCR can glue the time on: 28-11-202510:57PM
@@ -366,7 +395,8 @@ def all_dates(text):
 COMPANY_RE = re.compile(
     r"\b(pvt|private|ltd|limited|llp|inc|corp|co\.?|company|services|stationers|enterprises|traders|industries|"
     r"solutions|logistics|management|supplies|systems|associates|agency|works|marketing|motors|store|centre|center|"
-    r"cafe|café|bistro|restaurant|hotel|bakery|kitchen|dhaba|foods?)\b", re.I)
+    r"cafe|café|bistro|restaurant|hotel|bakery|kitchen|dhaba|foods?|tailors?|garments?|fashions?|textiles?|creations?|emporium|"
+    r"collections?|jewell?ers?|sarees?)\b|boutique\b", re.I)   # boutique also when OCR glues it on: "BELLEBOUTIQUE"
 SKIP_TOP = re.compile(r"^(tax\s*)?invoice\b|^\W*[\w-]*invoice[\w-]*\W*$|^\W*original|^\W*duplicate|^copy|^page\s*\d|^bill\s*of\s*supply|^e-?invoice|^gstin|^\W*(?:food\s*)?licen[cs]e|^\W*fssai", re.I)
 
 
@@ -448,7 +478,10 @@ def _invoice_shape(f, lines):
     """
     if any(INVOICE_TITLE.match(cell) for l in lines[:15] for cell in l.split("    ")):
         return "invoice"
-    tax, items = f["tax_amount"] is not None, bool(f["line_items"])
+    # a printed bill book ("PARTICULARS ... Qty  Rate  Amount") counts like line items, even when the handwriting in it
+    # can't be read: with its bill number it is a bill, held for a person to fill in rather than rejected
+    table = any(re.search(r"\b(particulars|description)\b", l, re.I) and re.search(r"\bamount\b", l, re.I) for l in lines)
+    tax, items = f["tax_amount"] is not None, bool(f["line_items"]) or table
     total = f["total"] is not None or f["subtotal"] is not None
     number, dated, gstin = bool(f["invoice_number"]), bool(f["invoice_date"]), bool(f["vendor_gstin"])
     if (number and (total or tax or items or dated)) or (tax and total) or (gstin and dated and (tax or items)):
@@ -556,7 +589,8 @@ def rules_extract(text):
     # after the label up to the next label for another kind of date, and a "Due Date" or "PO Date" label is skipped
     other = r"due|p\.?o\.?\s*date|order\s*date|delivery|valid|expir"
     for i, l in enumerate(lines):
-        for m in re.finditer(r"invoice\s*date|bill\s*date|date\s*of\s*(?:issue|invoice)|\bdated?\b", l, re.I):
+        # a handwritten date can run straight on from its printed label: "Date23.9.26"
+        for m in re.finditer(r"invoice\s*date|bill\s*date|date\s*of\s*(?:issue|invoice)|\bdated?(?![a-z])", l, re.I):
             if re.search(rf"(?:{other})\W*$", l[:m.start()], re.I):
                 continue
             seg = re.split(other, l[m.end():], maxsplit=1, flags=re.I)[0].strip(" :.-")
@@ -626,8 +660,8 @@ def rules_extract(text):
         pre_tax, [r"sub\s*-?\s*total", r"taxable\s*(value|amount)", r"total\s*before\s*tax", r"amount\s*before\s*tax", r"net\s*amount"])
     if e: ev["subtotal"] = e
 
-    f["total"], e = _first_label_amount(
-        lines, [r"grand\s*total", r"amount\s*payable|total\s*payable|net\s*payable|total\s*due|balance\s*due",
+    f["total"], e = _first_label_amount(   # "G. TOTAL" is how printed bill books abbreviate the grand total
+        lines, [r"grand\s*total|\bg\s*\.?\s*total\b", r"amount\s*payable|total\s*payable|net\s*payable|total\s*due|balance\s*due",
                 r"invoice\s*total|total\s*invoice\s*value"])
     if f["total"] is None:
         f["total"], e = _first_label_amount(after_tax or lines, [r"gr[o0u]ss\s*(?:total|amount|prem\w*)", r"\bnet\s*(?:amount|total|value)"])
@@ -678,7 +712,7 @@ def rules_extract(text):
         if re.search(r"\b(description|particulars)\b", l, re.I) and re.search(r"amount|qty|rate", l, re.I):
             in_table = True
             continue
-        if in_table and re.search(r"sub\s*-?\s*total|grand\s*total|gross\s*amount|total\s*\(|^\W*total\b", l, re.I):
+        if in_table and re.search(r"sub\s*-?\s*total|grand\s*total|\bg\s*\.?\s*total\b|gross\s*amount|total\s*\(|^\W*total\b", l, re.I):
             in_table = False
         if not in_table:
             continue
@@ -735,6 +769,13 @@ Rules:
 - tax_included_in_amounts: true if the line amounts / total already include GST and no separate tax line is shown.
 - doc_type is one of: invoice, credit_note, quotation, proforma, receipt, bill, other. A payment confirmation or fee receipt is 'receipt', not 'invoice'.
 - confidence per field: high | medium | low (low = blurry, handwritten, or partly cut off).
+- Hand-filled bill books (common at Indian shops, boutiques and tailors): the shop name printed at the top is vendor_name; the
+  "M/s." or "Name" line is the customer (buyer_name); the printed or stamped "Bill No." is invoice_number; "G. TOTAL" is the total.
+  If the total box is empty but the Amount column has figures, total = their sum, with confidence "low" and a note saying so.
+  A figure marked "Ad", "Adv" or "Advance" is money already paid, not the total: mention it in notes.
+- Handwriting may be in Hindi (Devanagari). Keep each description as written and add a short English meaning in brackets when it
+  is clear. Devanagari digits (०१२३४५६७८९) are numbers: convert them to 0-9. A line like "2 x 600 = 1200" is quantity 2, unit price 600,
+  amount 1200. Short dates such as 23.9.26 or 1.10.26 are day.month.year (2026-09-23, 2026-10-01).
 Schema:
 {"doc_type":str,"vendor_name":str|null,"vendor_gstin":str|null,"buyer_name":str|null,"invoice_number":str|null,"invoice_date":str|null,
 "po_reference":str|null,"currency":str,"subtotal":num|null,"tax_amount":num|null,"tax_rate_percent":num|null,"tax_included_in_amounts":bool,
@@ -763,6 +804,7 @@ def _ask_gemini(images, prompt):
             break
         logger.info("Gemini busy ({}), retrying in {}s", r.status_code, wait)
         time.sleep(wait)
+    _note_gemini_reply(r)
     if not r.ok:
         raise RuntimeError(f"Gemini returned {r.status_code}: {r.text[:200]}")
     candidates = r.json().get("candidates") or []
@@ -867,6 +909,8 @@ def extract_fields(doc, mode=None):
     mode = (mode or config.EXTRACTOR).lower()
     meta = dict(requested=mode, used=None, notes=list(doc.get("notes", [])))
     use_llm = mode == "llm" or (mode == "auto" and llm_available())
+    if config.GEMINI_API_KEY and _gemini_rejected[0] and mode != "rules":
+        meta["notes"].append(_gemini_rejected[0] + " - read with the built-in rules and OCR")
     fields = None
     if use_llm:
         if not llm_available():
@@ -896,10 +940,18 @@ def extract_fields(doc, mode=None):
 def ground(fields, text):
     """Does each key value literally appear in the document text? True / False."""
     out = {}
+    text = text.translate(DEVANAGARI_DIGITS)
     nums = [to_num(m) for m in re.findall(r"\d[\d,]*\.?\d*", text)]
     nums = [n for n in nums if n is not None]
     if fields.get("total") is not None:
         out["total"] = any(abs(n - fields["total"]) < 0.01 for n in nums)
+        if not out["total"]:
+            # a handwritten grand total is often the one figure OCR can't make out. It still counts as found when it is
+            # exactly the sum of two or more line amounts that were each found in the document: 1200 + 2750 = 3950
+            amounts = [i.get("amount") for i in fields.get("line_items") or [] if i.get("amount") is not None]
+            if len(amounts) >= 2 and all(any(abs(n - a) < 0.01 for n in nums) for a in amounts) and abs(sum(amounts) - fields["total"]) < 0.01:
+                out["total"] = True
+                fields.setdefault("evidence", {})["total"] = "the sum of the line amounts " + " + ".join(f"{a:g}" for a in amounts)
     if fields.get("subtotal") is not None:  # after a discount the subtotal is worked out, so check the printed figure
         printed = fields["subtotal"] + (fields.get("discount") or 0)
         out["subtotal"] = any(abs(n - printed) < 0.01 for n in nums)

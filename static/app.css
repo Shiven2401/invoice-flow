@@ -965,6 +965,10 @@ body.sheet-open .fsheet { transform: none; }
 .fs-foot .btn { padding: 12px 34px; font-size: 15px; }
 @media (prefers-reduced-motion: reduce) { .fsheet { transition: none; } }
 
+/* a refused model key, under "Reading with ..." in the sidebar */
+.engine-warn { display: inline-block; margin-top: 4px; font-weight: 700; color: #FFB4AC; }
+:root:not([data-theme="dark"]) .engine-warn { color: #FFB4AC; }
+
 /* the upload uses the width the rail gives back */
 .wizard { max-width: 1400px; }
 .wz-new .drop { max-width: none; min-height: 260px; justify-content: center; padding: 56px 24px; }

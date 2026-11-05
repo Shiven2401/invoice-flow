@@ -1302,7 +1302,7 @@ async function loadRules() {
        ${who} (${esc(e.model)}) then looks at the page image together with that text, handwriting included, and returns the fields. Every value is checked against the document text, and you check them on the Review page.
        If the model can't be reached, the built-in rules take over.`
     : `A PDF's own text layer is used when it has one. Scans and photos are read on this computer with OCR (PP-OCRv6), and words it is unsure of, usually handwriting, get a second, closer read. Built-in rules then pick out the fields, and you check them on the Review page.
-       ${e.key_rejected ? `The ANTHROPIC_API_KEY in .env isn't an Anthropic key (those start with sk-ant-), so Claude is not used.` : `For difficult handwriting or unusual layouts, add a Google Gemini key (GEMINI_API_KEY in .env) to have Gemini read the page too.`}`;
+       ${e.key_rejected ? `${esc(e.key_problem || "The model key can't be used")}, so documents are read with the built-in rules and OCR.` : `For difficult handwriting or unusual layouts, add a Google Gemini key (GEMINI_API_KEY in .env) to have Gemini read the page too.`}`;
   $("#rules").innerHTML = `
     <p class="lede">Every decision is the worst finding across nine checks. Nothing is scored in secret: the reasons shown for each invoice are the rules below, firing.</p>
     <div class="rules-grid" style="margin-top:22px">
@@ -1546,7 +1546,8 @@ async function init() {
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
-  $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`;
+  $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
+    + (e.key_problem ? `<br><span class="engine-warn" title="${esc(e.key_problem)}">${/GEMINI/.test(e.key_problem) ? "Gemini key rejected: fix it to read handwriting" : "Model key can't be used"}</span>` : "");
   const { runs } = await api("/api/runs");           // survive a page reload
   runs.slice().reverse().forEach(r => S.runs.set(r.id, { id: r.id, filename: r.filename, status: r.status === "done" || r.status === "error" ? "done" : r.status,
     decision: eff(r), batch: r.batch_id, review: r.status === "review" }));

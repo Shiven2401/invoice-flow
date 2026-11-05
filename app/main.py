@@ -32,6 +32,7 @@ logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".fo
             extract.ocr_available(), config.LOG_DIR)
 if extract.llm_key_problem():
     logger.warning("{} - using the built-in rules and OCR", extract.llm_key_problem())
+threading.Thread(target=extract.check_gemini_key, daemon=True).start()   # a refused Gemini key shows on the page at once
 interrupted = db.fail_interrupted()
 if interrupted:
     logger.warning("{} run(s) were interrupted by a restart and need a person", interrupted)
@@ -889,7 +890,7 @@ def vendors_xlsx(user: dict = Depends(auth.current_user)):
 def cfg(user: dict = Depends(auth.current_user)):
     return dict(rules=config.RULES, as_of=config.AS_OF, buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
-                               ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem())),
+                               ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
                 stages=[dict(id=i, title=t) for i, t in pipeline.STAGES])
 
 
