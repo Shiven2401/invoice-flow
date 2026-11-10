@@ -1624,3 +1624,17 @@ body.signed-out { background: var(--paper); }
   .tally { grid-template-columns: minmax(0, 1fr); }
   .split-call { flex-direction: column; align-items: flex-start; }
 }
+
+/* Ask Shiven: the three parts of the tour to choose from, and the whole tour */
+.g-choices { display: grid; gap: 8px; margin-top: 14px; }
+.g-choices button { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 14px;
+  background: var(--band); color: var(--ink); text-align: left; cursor: pointer; transition: border-color .12s, background .12s; }
+.g-choices button b { font: 600 14px/20px var(--sans); color: var(--ink); }
+.g-choices button small { font: 400 12.5px/17px var(--sans); color: var(--ink-2); }
+.g-choices button:hover, .g-choices button:focus-visible { border-color: var(--night); background: var(--paper-2); }
+.g-choices .g-all { align-items: center; border-color: #100D20; background: #100D20; color: #FFFFFF; font: 600 14px var(--sans); }
+.g-choices .g-all:hover { background: #2A2540; }
+:root[data-theme="dark"] .g-choices .g-all { border-color: var(--sun); background: var(--sun); color: #100D20; }
+#g-text:has(.g-choices) { max-height: none; }
+/* the filter card above History (inside the Overview) keeps its own spacing from the grid around it */
+#dash-overview > .filter-bar { margin: 0; }

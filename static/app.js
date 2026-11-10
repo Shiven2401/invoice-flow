@@ -1270,7 +1270,14 @@ function setTheme(theme, save = true) {
   $$("[data-theme-pick]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.themePick === theme)));
 }
 
+/* the filter card sits right above History on the Overview (as in the design) and above the charts on Analytics */
+function placeFilters(name) {
+  const bar = $("#filter-bar"), at = name === "analytics" ? $("#dash-analytics") : $("#history-section");
+  if (bar.nextElementSibling !== at) at.before(bar);
+}
+
 function dashTab(name) {
+  placeFilters(name);
   S.view.dashTab = name; saveView();
   $$("[data-dash-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.dashTab === name)));
   $("#dash-overview").hidden = name !== "overview";
@@ -1682,6 +1689,7 @@ async function init() {
   $$("[data-theme-pick]").forEach(b => b.addEventListener("click", () => setTheme(b.dataset.themePick)));
   setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light", false);
   $$("[data-dash-tab]").forEach(b => b.addEventListener("click", () => dashTab(b.dataset.dashTab)));
+  placeFilters(S.view.dashTab);
   wireAnalytics();
   $("#dash-overview").addEventListener("click", ev => {    // the tiles' arrows and "Review invoices": all held invoices, in History
     if (!ev.target.closest("[data-show-held]")) return;

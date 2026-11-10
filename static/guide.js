@@ -34,19 +34,46 @@ window.Guide = (() => {
   });
   const card = (label, title, text) => ({ target: `#dash-analytics .viz-card[aria-label="${label}"]`, title, text, wait4: true });
 
+  /* Ask Shiven offers the tour in three parts; a new account gets all of it, in this order:
+     welcome, the first three Getting around steps, Process an invoice, Dashboard & reports, the last two Getting around steps, goodbye */
+  const SECTIONS = {
+    around: { n: 1, title: "Getting around", blurb: "The sidebar, folders, light or dark, the PO ledger and Rules." },
+    process: { n: 2, title: "Process an invoice", blurb: "A sample invoice, page by page, from upload to the final stamp." },
+    reports: { n: 3, title: "Dashboard & reports", blurb: "Your numbers, the filters, History, Analytics and the Excel report." },
+  };
+  const CHOOSER = {
+    title: "Hi! What shall we look at?", place: "center", choices: true,
+    text: () => `I can show you one part at a time, or everything from the start.<span class="g-choices">${Object.entries(SECTIONS).map(([k, s]) =>
+      `<button type="button" data-g="pick" data-sec="${k}"><b>${s.n} · ${s.title}</b><small>${s.blurb}</small></button>`).join("")}
+      <button type="button" class="g-all" data-g="pick" data-sec="all">The whole tour</button></span>`,
+  };
+
+  function plan(sec) {                                   // the steps for one part, or "all" for the whole tour
+    const all = STEPS(), part = k => all.filter(s => s.sec === k);
+    if (sec === "all") {
+      const around = part("around");
+      return [all[0], ...around.slice(0, 3), ...part("process"), ...part("reports"), ...around.slice(3), all[all.length - 1]];
+    }
+    const s = SECTIONS[sec];
+    return [{ title: `${s.n} · ${s.title}`, place: "center", next: "Start", text: `${s.blurb} <b>Nothing moves on until you tap</b>, so take your time.` },
+      ...part(sec),
+      { target: "#guide-start", title: `That's ${s.title.toLowerCase()}!`, next: "Finish", before: () => { if (!narrow()) setRail(false, false); },
+        text: "Tap <b>Ask Shiven</b> whenever you want another part, or the whole tour." }];
+  }
+
   const STEPS = () => [
     { title: "Hey, I'm Shiven! Welcome to Invoice Flow", next: "Let's go",
       text: "Invoice Flow checks your bills so you don't have to. I'll show you every part of the app and process your first invoice with you, " +
         "one step at a time. <b>Nothing moves on until you tap</b>, so take as long as you like to read." },
-    narrow()
+    ...tag("around", [narrow()
       ? { target: "#menu", title: "The menu", tap: true, text: "Tap the menu to see your folders.", done: () => document.body.classList.contains("drawer-open") }
       : { target: ".side-nav", title: "Find your way around", before: () => setRail(false, false),
           text: "The four parts of Invoice Flow: <b>Dashboard</b>, <b>Process</b>, <b>PO ledger</b> and <b>Rules</b>. The one you're on is yellow. " +
             "The ☰ menu shrinks the sidebar to icons when you want more room, and brings it back." },
     { target: "#side-folders", title: "Folders", text: "Folders keep invoices together, like Food bills or Rent. Each folder gets its own dashboard, and New folder makes one.",
       after: () => { if (narrow()) setDrawer(false); } },
-    { target: ".theme-switch", title: "Light or dark", text: "Pick whichever is easier on your eyes. Invoice Flow remembers your choice." },
-    { target: ".drop", title: "Your invoices go here", before: () => { location.hash = "#process"; if (S.current || typeof VIEW !== "undefined" && VIEW) newDocument(); },
+    { target: ".theme-switch", title: "Light or dark", text: "Pick whichever is easier on your eyes. Invoice Flow remembers your choice." }]),
+    ...tag("process", [{ target: ".drop", title: "Your invoices go here", before: () => { location.hash = "#process"; if (S.current || typeof VIEW !== "undefined" && VIEW) newDocument(); },
       text: "Drop PDFs or photos here, choose several at once, a whole folder, or a ZIP. Clean PDFs, scans and phone photos all work." },
     { title: "Let's process your first invoice", place: "center", action: "Process a sample invoice",
       text: "I've got a sample invoice ready: a real-looking tax invoice from a supplier. Tap the button and I'll walk you through each of the six pages it goes through, from reading it to the final stamp.",
@@ -81,8 +108,8 @@ window.Guide = (() => {
         : "Happy with the decision? Tap <b>Next</b> to stamp it.",
       done: () => !!$("#run .wz-stamp") },
     { target: "#run .wz-stamp .stamp", title: "Done! Your first invoice", text: "Every invoice ends with a stamp like this: the decision, " +
-      "who made it (the system or a person) and the key details. It's saved in your history and counted on the Dashboard straight away." },
-    { target: tabLink("dashboard"), title: "The Dashboard", tap: true, text: "Tap <b>Dashboard</b> to see the big picture.",
+      "who made it (the system or a person) and the key details. It's saved in your history and counted on the Dashboard straight away." }]),
+    ...tag("reports", [{ target: tabLink("dashboard"), title: "The Dashboard", tap: true, text: "Tap <b>Dashboard</b> to see the big picture.",
       done: () => location.hash === "#dashboard" },
     { target: "#tally", title: "Your numbers", text: "At a glance: invoices processed, how many passed with no human touch, the money approved for payment, " +
       "the money held, and how many are waiting for you.",
@@ -107,13 +134,15 @@ window.Guide = (() => {
     { target: "#export", title: "Download the Excel report", point: "#export",
       text: "One click builds an Excel workbook for exactly what you're looking at: the chosen <b>folder</b> and <b>month</b>. " +
         "Inside: a <b>Summary</b> with charts, an <b>Analytics</b> sheet with everything on this tab, that folder's <b>invoice list</b>, the PO ledger, your vendors and the rejected invoices. " +
-        "The charts are real Excel charts, so they're ready for a report." },
-    { target: tabLink("ledger"), title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors. " +
+        "The charts are real Excel charts, so they're ready for a report." }]),
+    ...tag("around", [{ target: tabLink("ledger"), title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors. " +
       "Raise your own with <b>New purchase order</b>, and add a supplier before its first bill with <b>New vendor</b>." },
-    { target: tabLink("rules"), title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." },
+    { target: tabLink("rules"), title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." }]),
     { target: "#guide-start", title: "That's the tour!", next: "Finish", before: () => { if (narrow()) return; setRail(false, false); },
       text: "Upload your own invoices whenever you're ready. If you ever need me again, tap Ask Shiven." },
   ];
+
+  function tag(sec, list) { return list.map(s => ({ ...s, sec })); }
 
   function pickSample() {
     const files = (S.scenarios || []).map(s => s.file);
@@ -147,6 +176,7 @@ window.Guide = (() => {
       const b = ev.target.closest("[data-g]"); if (!b) return;
       if (b.dataset.g === "skip" || b.dataset.g === "finish") return stop(true);
       if (b.dataset.g === "back") return go(i - 1);
+      if (b.dataset.g === "pick") { steps = plan(b.dataset.sec); i = 0; return go(0); }   // a part chosen on Ask Shiven
       if (b.dataset.g === "run") { b.disabled = true; try { await steps[i].run(); } catch (e) { alert(e.message); b.disabled = false; return; } return go(i + 1); }
       go(i + 1);
     });
@@ -187,18 +217,20 @@ window.Guide = (() => {
 
   function render() {
     const step = steps[i];
-    $("#g-step", root).textContent = `Step ${i + 1} of ${steps.length}`;
+    $("#g-step", root).textContent = step.choices ? "Ask Shiven" : `Step ${i + 1} of ${steps.length}`;
     $("#g-title", root).textContent = val(step.title);
     $("#g-text", root).innerHTML = val(step.text);
     const next = $('[data-g="next"], [data-g="run"], [data-g="finish"]', root), back = $('[data-g="back"]', root);
     back.hidden = i === 0 || !!step.wait || !!step.tap;
-    next.hidden = !!step.wait || (!!step.tap && !step.done());
+    next.hidden = !!step.wait || !!step.choices || (!!step.tap && !step.done());
+    $(".g-skip", root).textContent = step.choices ? "Not now" : "Skip tour";
     next.disabled = false;
     if (step.run) { next.dataset.g = "run"; next.textContent = step.action; }
     else if (i === steps.length - 1) { next.dataset.g = "finish"; next.textContent = step.next || "Finish"; }
     else { next.dataset.g = "next"; next.textContent = step.next || "Next"; }
-    $(".g-skip", root).hidden = i === steps.length - 1;
+    $(".g-skip", root).hidden = i === steps.length - 1 && !step.choices;
     if (!next.hidden) next.focus({ preventScroll: true });
+    else if (step.choices) $('[data-g="pick"]', root).focus({ preventScroll: true });
   }
 
   async function go(n) {
@@ -234,10 +266,12 @@ window.Guide = (() => {
     }
   }
 
-  function start() {
+  /* start("all") runs the whole tour (a new account); start() with no part asks which part first (Ask Shiven) */
+  function start(sec) {
     if (root && root.isConnected) return;
     if (!root) build(); else document.body.appendChild(root);
-    steps = STEPS();
+    steps = typeof sec === "string" ? plan(sec) : [CHOOSER];
+    i = 0;
     document.body.classList.add("guide-on");
     cancelAnimationFrame(raf); place();
     go(0);
@@ -259,9 +293,9 @@ window.Guide = (() => {
     let seen = null, fresh = false;
     try { fresh = sessionStorage.getItem("invoice-flow-new-account") === S.me; sessionStorage.removeItem("invoice-flow-new-account"); } catch (e) { /* no flag */ }
     try { seen = localStorage.getItem(key()); } catch (e) { /* storage blocked: treat as seen, never nag */ seen = "blocked"; }
-    if (fresh || (!seen && S.runs.size === 0 && !location.hash.startsWith("#signup"))) setTimeout(start, 700);
+    if (fresh || (!seen && S.runs.size === 0 && !location.hash.startsWith("#signup"))) setTimeout(() => start("all"), 700);
   }
 
-  document.addEventListener("click", ev => { if (ev.target.closest("#guide-start")) start(); });
+  document.addEventListener("click", ev => { if (ev.target.closest("#guide-start")) start(); });   // Ask Shiven: choose a part
   return { start, stop, maybeStart };
 })();
