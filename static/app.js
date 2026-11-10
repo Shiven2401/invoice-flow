@@ -32,7 +32,7 @@ const STAGES = [
 const CODE_LABEL = {};  // filled from /api/config: the Excel report uses the same wording
 
 const S = { cfg: null, scenarios: [], runs: new Map(), queue: [], streaming: false, current: null, follow: true, filter: "ALL", history: [], me: "",
-  folders: [], view: { group: "date", kind: "all", pick: "", search: "", folder: null }, collapsed: new Set() };
+  folders: [], view: { group: "month", kind: "all", pick: "", search: "", folder: null }, collapsed: new Set() };
 
 /* ----------------------------------------------------------------- folders -- */
 /* same drawing style as the sidebar's other icons: 24px grid, 1.8 stroke, round ends */

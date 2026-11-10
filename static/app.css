@@ -1293,7 +1293,8 @@ body:not(.signed-out) { grid-template-columns: 256px minmax(0, 1fr); }
 .side-head .brand { gap: 12px; padding: 0; }
 .brand-mark, .auth::before { width: 34px; height: 34px; border-radius: 11px; background: var(--sun); color: var(--night); font-size: 17px; box-shadow: none; }
 :root[data-theme="dark"] .brand-mark, :root[data-theme="dark"] .auth::before { color: #100D20; }
-.brand-name { font: 700 19px var(--sans); letter-spacing: -.01em; color: #FFFFFF; }
+.sidebar .brand-name { font: 700 19px var(--sans); letter-spacing: -.01em; color: #FFFFFF; }
+.landing .brand-name { font: 700 19px var(--sans); letter-spacing: -.01em; color: var(--ink); }   /* on the light landing page the name is ink */
 .menu-btn { width: 36px; height: 36px; margin-left: -8px; color: #B0ACBF; }
 .menu-btn:hover { background: rgba(255, 255, 255, .08); color: #FFFFFF; }
 
@@ -1391,7 +1392,13 @@ input[type="text"], input[type="search"], input[type="password"], input[type="nu
 .tally { gap: 16px; }
 .tally > div, .tally > div:first-child { min-height: 144px; padding: 20px 22px; border: 0; border-radius: var(--r-card); box-shadow: none; overflow: visible; }
 .tally > div::after { content: none; }
-.tally .v, .tally .v.v-long { font: 600 clamp(22px, .9vw + 12px, 29px)/1.4 var(--sans); letter-spacing: -.01em; }
+.tally .v, .tally .v.v-long { font: 600 clamp(20px, 1.15vw + 7px, 29px)/1.4 var(--sans); letter-spacing: -.01em; white-space: nowrap; }
+/* only where five tiles would be too narrow for a lakh figure (a small laptop window): three and two */
+@media (max-width: 1239px) and (min-width: 1101px) {
+  .tally { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tally > div:nth-child(-n+3) { grid-column: span 2; }
+  .tally > div:nth-child(n+4) { grid-column: span 3; }
+}
 .tally .l { margin-top: 8px; font: 500 13px/18px var(--sans); }
 .tally .s { margin-top: 8px; font: 400 12px/17px var(--sans); }
 .tally > div.tile-count { background: #100D20; color: #FFFFFF; }
@@ -1533,7 +1540,8 @@ body.signed-out { background: var(--paper); }
 .lp-f::after { content: none; }
 .lp-how ol { overflow: hidden; box-shadow: none; }
 .lp-how li::before { color: var(--ink-2); }
-.lp-checks li { background: rgba(255, 255, 255, .12); }
+.lp-demo::before { z-index: 0; }
+.lp-checks li { position: relative; z-index: 1; background: #2A2545; color: #FFFFFF; }   /* solid, so the yellow circle never shows through */
 /* Shiven's bubble and the ledger forms, rounded to match */
 .g-bubble { border-radius: 20px; }
 .g-spot { border-radius: 18px; }
@@ -1541,11 +1549,15 @@ body.signed-out { background: var(--paper); }
 .lf-actions .btn { border-radius: var(--r-ctl); }
 
 /* ------------------------------------------------------------- screen sizes */
-/* a laptop: the five tiles as three and two, so a crore never squeezes */
-@media (max-width: 1440px) and (min-width: 1101px) {
-  .tally { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .tally > div:nth-child(-n+3) { grid-column: span 2; }
-  .tally > div:nth-child(n+4) { grid-column: span 3; }
+/* a laptop keeps the design's five tiles in one row; the figures shrink with the width (see .tally .v) */
+@media (min-width: 861px) {
+  .side-head .menu-btn { order: 2; margin: 0 -6px 0 auto; }   /* the brand on the left exactly as in the design, the menu at the right */
+  body.rail .side-head .menu-btn { margin: 0; }
+}
+/* the row's delete button appears on hover, so the table reads like the design */
+@media (hover: hover) {
+  #history .row-remove { opacity: 0; transition: opacity .12s; }
+  #history tr:hover .row-remove, #history .row-remove:focus-visible { opacity: 1; }
 }
 @media (max-width: 1280px) {
   .page { padding: 28px 28px 104px; }

@@ -204,13 +204,6 @@
         </select>
         <select id="period-pick" aria-label="Which month or year" hidden></select>
       </div>
-      <div class="f f-outcome history-only"><span id="outcome-label">Outcome</span>
-        <div class="chips" id="filters" role="group" aria-labelledby="outcome-label">
-          <button class="chip on" data-f="ALL">All</button>
-          <button class="chip" data-f="APPROVE">Approved</button>
-          <button class="chip" data-f="HOLD">Held</button>
-        </div>
-      </div>
       <label class="f f-group history-only"><span>Group by</span>
         <select id="group-by">
           <option value="date">Date</option>
@@ -224,6 +217,13 @@
           <option value="none">No grouping</option>
         </select>
       </label>
+      <div class="f f-outcome history-only"><span id="outcome-label">Outcome</span>
+        <div class="chips" id="filters" role="group" aria-labelledby="outcome-label">
+          <button class="chip on" data-f="ALL">All</button>
+          <button class="chip" data-f="APPROVE">Approved</button>
+          <button class="chip" data-f="HOLD">Held</button>
+        </div>
+      </div>
       </div>
       <input type="search" class="f-search history-only" id="history-search" placeholder="Find invoice, vendor, PO or file" aria-label="Find an invoice">
     </div>
