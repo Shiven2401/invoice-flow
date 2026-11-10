@@ -564,7 +564,7 @@ def approve_vendor(run_id: str, body: dict = Body(...), user: dict = Depends(aut
 def _open_pos(vendor_id, user_id):
     """The vendor's open POs that still have a balance: what a person can match a held invoice to."""
     out = []
-    for p in rules.load_pos():
+    for p in rules.load_pos(user_id):
         if p["vendor_id"] == vendor_id and p["status"] == "open":
             remaining = round(p["net_amount"] - db.billed(p["po_number"], user_id), 2)
             if remaining > 0.005:
@@ -620,6 +620,74 @@ def remove_vendor(vendor_id: str, user: dict = Depends(auth.current_user)):
     """Undo an approval. Only vendors approved in the app can go: the master list isn't edited from here."""
     if not db.remove_vendor(vendor_id, user["id"]):
         raise HTTPException(404, "not a vendor approved in the app")
+    return dict(ok=True)
+
+
+@app.post("/api/vendors")
+def add_vendor(body: dict = Body(...), user: dict = Depends(auth.current_user)):
+    """A person adds a vendor on the PO ledger page, before any of its bills arrive. The same rules as approving one
+    from a held invoice: a valid GSTIN if given, and no lookalike of a vendor already on file or blocked."""
+    name = re.sub(r"\s+", " ", str(body.get("name") or "")).strip()[:200]
+    gstin = re.sub(r"\s+", "", str(body.get("gstin") or "")).upper()
+    aliases = [a for a in (re.sub(r"\s+", " ", x).strip()[:200] for x in re.split(r"[,|\n]", str(body.get("aliases") or ""))) if a and a.lower() != name.lower()][:10]
+    note = str(body.get("note") or "").strip()[:500] or "added on the PO ledger page"
+    vendors = rules.load_vendors(user["id"])
+    problem = rules.vendor_approval_problem(name, gstin, vendors)
+    if problem:
+        raise HTTPException(400, problem)
+    vendor_id = rules.next_vendor_id(vendors)
+    db.add_vendor(vendor_id, name, "|".join(aliases), gstin, note, None, user["id"])
+    if body.get("no_po"):
+        db.set_no_po(vendor_id, note, None, user["id"])
+    return dict(ok=True, vendor_id=vendor_id)
+
+
+@app.post("/api/pos")
+def add_po(body: dict = Body(...), user: dict = Depends(auth.current_user)):
+    """A person raises a purchase order on the PO ledger page. Invoices that cite it are then matched and billed
+    against it like any PO in the register."""
+    number = re.sub(r"\s+", " ", str(body.get("po_number") or "")).strip().upper()
+    if not rules.PO_NUMBER_RE.match(number):
+        raise HTTPException(400, "A PO number needs 2 to 40 letters, digits or / . _ - characters, such as PO-2026-2001.")
+    if any(extract.norm_alnum(p["po_number"]) == extract.norm_alnum(number) for p in rules.load_pos(user["id"])):
+        raise HTTPException(409, f"{number} is already in your PO register.")
+    vendor = next((v for v in rules.load_vendors(user["id"]) if v["vendor_id"] == str(body.get("vendor_id") or "")), None)
+    if not vendor:
+        raise HTTPException(400, "Choose a vendor from your vendor list.")
+    if vendor["status"].lower() != "approved":
+        raise HTTPException(400, f"{vendor['name']} is {vendor['status']}, so no purchase order can be raised for it.")
+    description = re.sub(r"\s+", " ", str(body.get("description") or "")).strip()[:200]
+    if not description:
+        raise HTTPException(400, "Say what the purchase order is for.")
+    try:
+        net = round(float(body.get("net_amount")), 2)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "The PO value must be a number.")
+    if not 0 < net < 1e12:
+        raise HTTPException(400, "The PO value must be more than zero.")
+    try:
+        rate = float(body.get("gst_rate"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Choose a GST rate.")
+    if rate not in rules.GST_RATES:
+        raise HTTPException(400, f"GST must be one of {', '.join(f'{r:g}%' for r in rules.GST_RATES)}.")
+    po_date = str(body.get("po_date") or "").strip() or datetime.now().date().isoformat()
+    try:
+        datetime.strptime(po_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(400, "The PO date must look like 2026-11-06.")
+    db.add_po(user["id"], number, vendor["vendor_id"], po_date, description, net, rate)
+    return dict(ok=True, po_number=number)
+
+
+@app.delete("/api/pos/{po_number:path}")   # a PO number can have slashes in it (PO/2026/12)
+def remove_po(po_number: str, user: dict = Depends(auth.current_user)):
+    """Take back a purchase order added in the app, as long as nothing has been billed against it yet."""
+    if not any(p["po_number"] == po_number for p in db.added_pos(user["id"])):
+        raise HTTPException(404, "not a purchase order added in the app")
+    if db.ledger_for(po_number, user["id"]):
+        raise HTTPException(400, f"Invoices are already billed against {po_number}, so it has to stay.")
+    db.remove_po(po_number, user["id"])
     return dict(ok=True)
 
 
@@ -751,9 +819,9 @@ def reset_folder(folder_id: int, user: dict = Depends(auth.current_user)):
 def pos(user: dict = Depends(auth.current_user)):
     vendors = {v["vendor_id"]: v for v in rules.load_vendors(user["id"])}
     out = []
-    for p in rules.load_pos():
+    for p in rules.load_pos(user["id"]):
         billed = db.billed(p["po_number"], user["id"])
-        out.append(dict(p, vendor_name=vendors[p["vendor_id"]]["name"], billed=round(billed, 2),
+        out.append(dict(p, vendor_name=(vendors.get(p["vendor_id"]) or {}).get("name") or f"{p['vendor_id']} (removed)", billed=round(billed, 2),
                         remaining=round(p["net_amount"] - billed, 2), pct_billed=round(billed / p["net_amount"] * 100, 1),
                         invoices=db.ledger_for(p["po_number"], user["id"])))
     return dict(pos=out, vendors=list(vendors.values()))

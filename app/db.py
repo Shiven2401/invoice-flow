@@ -57,6 +57,9 @@ def init(c):
         user_id INTEGER, vendor_id TEXT, alias TEXT, added_at TEXT, run_id TEXT, PRIMARY KEY(user_id, vendor_id, alias));
     CREATE TABLE IF NOT EXISTS vendor_po_refs(
         user_id INTEGER, vendor_id TEXT, reference TEXT, added_at TEXT, run_id TEXT, PRIMARY KEY(user_id, vendor_id, reference));
+    CREATE TABLE IF NOT EXISTS purchase_orders(
+        user_id INTEGER, po_number TEXT, vendor_id TEXT, po_date TEXT, description TEXT, net_amount REAL, gst_rate REAL,
+        status TEXT, created_at TEXT, PRIMARY KEY(user_id, po_number));
     """)
     # databases made by earlier versions
     run_cols = {r[1] for r in c.execute("PRAGMA table_info(runs)")}
@@ -310,6 +313,33 @@ def remove_ledger(run_id):
         conn().commit()
 
 
+# ---------------------------------------------------------- purchase orders --
+
+def added_pos(user_id):
+    """Purchase orders this account added on the PO ledger page, oldest first."""
+    with _lock:
+        rows = conn().execute("SELECT po_number,vendor_id,po_date,description,net_amount,gst_rate,status,created_at "
+                              "FROM purchase_orders WHERE user_id=? ORDER BY created_at, rowid", (user_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_po(user_id, po_number, vendor_id, po_date, description, net_amount, gst_rate):
+    with _lock:
+        conn().execute("INSERT INTO purchase_orders(user_id,po_number,vendor_id,po_date,description,net_amount,gst_rate,status,created_at) "
+                       "VALUES(?,?,?,?,?,?,?,?,?)", (user_id, po_number, vendor_id, po_date, description, net_amount, gst_rate, "open", now()))
+        conn().commit()
+    logger.info("PO {} added for vendor {}: {} pre-tax at {}% GST", po_number, vendor_id, net_amount, gst_rate)
+
+
+def remove_po(po_number, user_id):
+    with _lock:
+        removed = conn().execute("DELETE FROM purchase_orders WHERE po_number=? AND user_id=?", (po_number, user_id)).rowcount
+        conn().commit()
+    if removed:
+        logger.info("PO {} removed", po_number)
+    return bool(removed)
+
+
 # ------------------------------------------------------------------ vendors --
 
 def added_vendors(user_id):
@@ -460,7 +490,7 @@ def reset(user_id):
         conn().execute("DELETE FROM runs WHERE user_id=?", (user_id,))
         conn().execute("DELETE FROM ledger WHERE user_id=?", (user_id,))
         conn().execute("DELETE FROM vendors WHERE user_id=?", (user_id,))
-        for table in ("vendor_no_po", "vendor_aliases", "vendor_po_refs", "folders"):
+        for table in ("vendor_no_po", "vendor_aliases", "vendor_po_refs", "folders", "purchase_orders"):
             conn().execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
         conn().commit()
     return [(r["id"], r["file_path"]) for r in rows]

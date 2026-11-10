@@ -84,9 +84,10 @@ def _end_extract(end, f, meta, input_fs, run_id):
     found = [k for k in ("vendor_name", "invoice_number", "invoice_date", "po_reference", "total") if f.get(k)]
     # whether the vendor is already approved, so the Review page can offer to approve a new one before the checks,
     # and whether the PO it cites is in the register, so a folder's first invoice can settle the PO question for all
-    vres, _ = rules.match_vendor(f, rules.load_vendors(db.run_owner(run_id)))
+    owner = db.run_owner(run_id)
+    vres, _ = rules.match_vendor(f, rules.load_vendors(owner))
     ref = extract.norm_alnum(f.get("po_reference"))
-    po_check = dict(reference=f.get("po_reference"), known=bool(ref) and any(extract.norm_alnum(p["po_number"]) == ref for p in rules.load_pos()))
+    po_check = dict(reference=f.get("po_reference"), known=bool(ref) and any(extract.norm_alnum(p["po_number"]) == ref for p in rules.load_pos(owner)))
     end("extract", [rules.F("EXTRACT_NOTE", "warn", "extract", n) for n in meta["notes"] if "fell back" in n or "cannot extract" in n] + input_fs,
         f"{meta['used']} - {len(found)} key fields found, {len(f.get('line_items', []))} line items",
         dict(extractor=meta["used"], fields=_public_fields(f), line_items=f.get("line_items", []),
@@ -179,7 +180,7 @@ def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
     try:
         # 4 --------------------------------------------------------- validate
         start("validate")
-        vendors, pos = rules.load_vendors(user_id), rules.load_pos()
+        vendors, pos = rules.load_vendors(user_id), rules.load_pos(user_id)
         guess = next((p for p in pos if f.get("po_reference") and p["po_number"] == f["po_reference"]), None)
         d = rules.derive_amounts(f, assumed_rate=guess["gst_rate"] if guess else None)
         checks, vfs = rules.validate(f, d)

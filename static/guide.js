@@ -104,7 +104,8 @@ window.Guide = (() => {
       text: "One click builds an Excel workbook for exactly what you're looking at: the chosen <b>folder</b> and <b>month</b>. " +
         "Inside: a <b>Summary</b> with charts, an <b>Analytics</b> sheet with everything on this tab, that folder's <b>invoice list</b>, the PO ledger, your vendors and the rejected invoices. " +
         "The charts are real Excel charts, so they're ready for a report." },
-    { target: '.dock a[data-tab="ledger"]', title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors." },
+    { target: '.dock a[data-tab="ledger"]', title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors. " +
+      "Raise your own with <b>New purchase order</b>, and add a supplier before its first bill with <b>New vendor</b>." },
     { target: '.dock a[data-tab="rules"]', title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." },
     { target: "#guide-start", title: "That's the tour!", next: "Finish", before: () => { if (narrow()) return; setRail(false, false); },
       text: "Upload your own invoices whenever you're ready. If you ever need me again, tap Ask Shiven." },

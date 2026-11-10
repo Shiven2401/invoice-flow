@@ -260,12 +260,17 @@
   <section id="view-ledger" class="view page" hidden>
     <h1>Purchase order ledger</h1>
     <p class="lede">Every approved invoice is posted against its PO. The next invoice is judged on what has been billed so far, not on its own.</p>
+    <div class="ledger-actions">
+      <button class="btn primary" type="button" id="add-po"><span aria-hidden="true">＋</span> New purchase order</button>
+      <button class="btn" type="button" id="add-vendor"><span aria-hidden="true">＋</span> New vendor</button>
+    </div>
     <div class="table-wrap"><table class="greenbar" id="po-table"></table></div>
     <div class="table-head section-head">
       <h2>Vendors</h2>
-      <a class="btn primary" id="export-vendors" href="/api/vendors.xlsx">Download approved vendors</a>
+      <span class="ledger-actions"><button class="btn" type="button" data-add-vendor><span aria-hidden="true">＋</span> Add vendor</button>
+        <a class="btn primary" id="export-vendors" href="/api/vendors.xlsx">Download approved vendors</a></span>
     </div>
-    <p class="lede">The master list, plus any vendor a person approved from a held invoice. Approvals made here can be removed.</p>
+    <p class="lede">The master list, plus vendors you add here or approve from a held invoice. The ones you added can be removed.</p>
     <div class="table-wrap"><table class="greenbar" id="vendor-table"></table></div>
   </section>
 
@@ -277,6 +282,7 @@
 </main>
 
 <dialog class="modal" id="folder-dialog" aria-label="Folders"></dialog>
+<dialog class="modal ledger-modal" id="ledger-dialog" aria-label="Add to the PO ledger"></dialog>
 <div class="toast" id="toast" role="status" hidden><span></span><button type="button">Undo</button></div>
 
 <aside class="drawer" id="drawer" hidden aria-label="Run detail">

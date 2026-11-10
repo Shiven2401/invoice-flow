@@ -80,14 +80,22 @@ def load_vendors(user_id):
     return out
 
 
-def load_pos():
+def load_pos(user_id=None):
+    """The shared PO register, plus the purchase orders this account added on the PO ledger page."""
     out = []
     with open(config.DATA_DIR / "purchase_orders.csv", newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             r["net_amount"] = float(r["net_amount"])
             r["gst_rate"] = float(r["gst_rate"])
+            r["source"] = "master list"
             out.append(r)
+    if user_id is not None:
+        out += [dict(p, source="added in app") for p in db.added_pos(user_id)]
     return out
+
+
+GST_RATES = (0, 0.25, 3, 5, 12, 18, 28, 40)   # the slabs a purchase order can be raised at
+PO_NUMBER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9/._\- ]{1,39}$")
 
 
 # ----------------------------------------------------------------- vendor --

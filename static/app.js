@@ -1278,8 +1278,10 @@ function dashTab(name) {
 }
 
 /* ------------------------------------------------------------------ ledger -- */
+let LEDGER = { pos: [], vendors: [] };                     // what the PO ledger page last showed, for its two forms
+
 async function loadLedger() {
-  const { pos, vendors } = await api("/api/pos");
+  const { pos, vendors } = LEDGER = await api("/api/pos");
   $("#vendor-table").innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>GSTIN</th><th>Status</th><th>Source</th><th>Approval note</th><th></th></tr></thead><tbody>
     ${vendors.map(v => `<tr><td>${esc(v.vendor_id)}</td><td>${esc(v.name)}</td><td>${esc(v.gstin) || '<span class="muted">none</span>'}</td>
       <td><span class="mini ${v.status === "approved" ? "ok" : "bad"}">${esc(v.status)}</span></td><td class="muted">${esc(v.source)}</td><td>${esc(v.note)}</td>
@@ -1287,11 +1289,78 @@ async function loadLedger() {
   $("#po-table").innerHTML = `<thead><tr><th>PO</th><th>Vendor</th><th>For</th><th class="right">PO value</th><th>Billed so far</th><th class="right">Open</th><th>Approved invoices</th></tr></thead><tbody>
     ${pos.map(p => {
       const cls = p.pct_billed > 100.01 ? "over" : p.pct_billed >= 99.9 ? "full" : "";
-      return `<tr><td><b>${esc(p.po_number)}</b></td><td>${esc(p.vendor_name)}</td><td>${esc(p.description)}</td><td class="right">${inr(p.net_amount)}</td>
+      const mine = p.source === "added in app";
+      return `<tr><td><b>${esc(p.po_number)}</b>${mine ? `<span class="po-mine">added by you${p.invoices.length ? "" : ` · <button class="link-btn" type="button" data-remove-po="${esc(p.po_number)}">Remove</button>`}</span>` : ""}</td>
+        <td>${esc(p.vendor_name)}</td><td>${esc(p.description)}</td><td class="right">${inr(p.net_amount)}<span class="po-gst">+ ${pct(p.gst_rate, 2)} GST</span></td>
         <td><div class="pobar ${cls}" role="img" aria-label="${pct(p.pct_billed)} billed"><i style="width:${Math.min(p.pct_billed, 100)}%"></i></div><span class="muted">${inr(p.billed)} (${pct(p.pct_billed)})</span></td>
         <td class="right">${inr(Math.max(p.remaining, 0))}</td>
         <td><div class="po-inv">${p.invoices.length ? p.invoices.map(i => `<span class="pill">${esc(i.invoice_number || "no number")}: ${inr0(i.net_amount)}</span>`).join("") : '<span class="muted">none yet</span>'}</div></td></tr>`;
     }).join("")}</tbody>`;
+}
+
+/* the PO ledger's two forms: a new purchase order, and a new vendor (which a new PO can open on the way, then come back) */
+const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40];
+const PO_ICON = ICON(`<path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 6 20V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4M9 12h6M9 15.5h6"/>`);
+const VENDOR_ICON = ICON(`<path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5.5 12v8h13v-8M10 20v-4.5h4V20"/>`);
+const localDay = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+
+function nextPoNumber() {                                  // PO-<year>-<next number>, following the register's own pattern
+  const y = new Date().getFullYear();
+  const n = Math.max(1000, ...LEDGER.pos.map(p => /^PO-(\d{4})-(\d+)$/i.exec(p.po_number)).filter(m => m && +m[1] === y).map(m => +m[2]));
+  return `PO-${y}-${n + 1}`;
+}
+
+function ledgerDialog(kind, keep = {}) {
+  const dlg = $("#ledger-dialog"), approved = LEDGER.vendors.filter(v => v.status === "approved");
+  const head = (icon, title, sub) => `<div class="modal-head">${icon}<h2>${title}</h2><button class="icon-btn" type="button" data-close aria-label="Close">${REMOVE_ICON}</button></div>
+    <p class="muted lf-sub">${sub}</p>`;
+  const actions = label => `<p class="auth-error" data-error hidden></p>
+    <div class="lf-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">${label}</button></div>`;
+  dlg.innerHTML = kind === "po"
+    ? `<form class="modal-body ledger-form" novalidate>${head(PO_ICON, "New purchase order", "Invoices that cite this PO are matched and billed against it, like any PO in your register.")}
+        <label>PO number<input name="po_number" required maxlength="40" autocomplete="off" value="${esc(nextPoNumber())}"></label>
+        <label>Vendor<span class="lf-row"><select name="vendor_id" required><option value="">Choose a vendor</option>
+          ${approved.map(v => `<option value="${esc(v.vendor_id)}">${esc(v.name)}</option>`).join("")}</select>
+          <button class="btn" type="button" data-new-vendor>＋ New</button></span></label>
+        <label>What it's for<input name="description" required maxlength="200" placeholder="Office chairs for the Jodhpur branch"></label>
+        <div class="lf-two"><label>PO value before GST (₹)<input name="net_amount" type="number" inputmode="decimal" min="0.01" step="0.01" required placeholder="50000"></label>
+          <label>GST<select name="gst_rate">${GST_RATES.map(r => `<option value="${r}"${r === 18 ? " selected" : ""}>${r}%</option>`).join("")}</select></label></div>
+        <label>PO date<input name="po_date" type="date" value="${localDay()}"></label>
+        <p class="lf-total" data-total></p>${actions("Add purchase order")}</form>`
+    : `<form class="modal-body ledger-form" novalidate>${head(VENDOR_ICON, "New vendor", "Their bills are matched to this vendor by name and GSTIN, so they aren't held as an unknown vendor.")}
+        <label>Vendor name<input name="name" required maxlength="200" autocomplete="off" placeholder="Belle Boutique"></label>
+        <label>GSTIN <small>optional, 15 characters</small><input name="gstin" maxlength="15" autocomplete="off" placeholder="08AABCS1234F1Z5" class="lf-code"></label>
+        <label>Other names on their bills <small>optional, separated by commas</small><input name="aliases" maxlength="600" placeholder="Belle, Belle Tailors"></label>
+        <label class="wz-check"><input type="checkbox" name="no_po"><span><b>This vendor doesn't use purchase orders</b>
+          <small>For a shop, restaurant or clinic. Its bills won't be held for having no PO.</small></span></label>
+        <label>Note <small>optional</small><input name="note" maxlength="500" placeholder="How was this vendor verified?"></label>
+        ${actions(keep.back ? "Add vendor and go back" : "Add vendor")}</form>`;
+  const form = $("form", dlg), error = $("[data-error]", dlg);
+  Object.entries(keep.values || {}).forEach(([k, v]) => { const el = form.elements[k]; if (el) el.type === "checkbox" ? (el.checked = !!v) : (el.value = v); });
+  const total = $("[data-total]", dlg);
+  const sum = () => { if (!total) return; const n = parseFloat(form.elements.net_amount.value), r = parseFloat(form.elements.gst_rate.value);
+    total.textContent = n > 0 ? `With GST: ${inr(Math.round(n * (1 + r / 100) * 100) / 100)}` : ""; };
+  form.addEventListener("input", sum); sum();
+  dlg.onclick = ev => {
+    if (kind === "vendor" && keep.back && ev.target.closest("[data-close]")) ledgerDialog("po", { values: keep.back });   // back to the PO, as typed
+    else if (ev.target === dlg || ev.target.closest("[data-close]")) dlg.close();
+    else if (ev.target.closest("[data-new-vendor]")) ledgerDialog("vendor", { back: Object.fromEntries(new FormData(form)) });
+  };
+  form.onsubmit = async ev => {
+    ev.preventDefault();
+    const f = Object.fromEntries(new FormData(form)), button = $("button[type=submit]", form);
+    if (kind === "vendor") f.no_po = !!form.elements.no_po.checked;
+    error.hidden = true; button.disabled = true;
+    try {
+      const d = await api(kind === "po" ? "/api/pos" : "/api/vendors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+      await loadLedger();
+      if (kind === "vendor" && keep.back) { ledgerDialog("po", { values: { ...keep.back, vendor_id: d.vendor_id } }); return; }
+      dlg.close();
+      toast(kind === "po" ? `${d.po_number} added to your PO register.` : `${f.name.trim()} added to your vendors as ${d.vendor_id}.`);
+    } catch (e) { error.textContent = e.message; error.hidden = false; button.disabled = false; }
+  };
+  if (!dlg.open) dlg.showModal();
+  (form.querySelector("input:not([type=checkbox])") || form).focus();
 }
 
 /* ------------------------------------------------------------------- rules -- */
@@ -1570,6 +1639,13 @@ async function init() {
     const b = ev.target.closest("[data-remove-vendor]"); if (!b) return;
     if (!confirm(`Remove ${b.dataset.removeVendor} from the approved list? Its invoices already processed stay as they are.`)) return;
     try { await api(`/api/vendors/${b.dataset.removeVendor}`, { method: "DELETE" }); loadLedger(); } catch (e) { alert(e.message); }
+  });
+  $("#add-po").addEventListener("click", () => ledgerDialog("po"));
+  $$("#add-vendor, [data-add-vendor]").forEach(b => b.addEventListener("click", () => ledgerDialog("vendor")));
+  $("#po-table").addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-remove-po]"); if (!b) return;
+    if (!confirm(`Remove ${b.dataset.removePo} from your PO register? Nothing has been billed against it.`)) return;
+    try { await api(`/api/pos/${b.dataset.removePo.split("/").map(encodeURIComponent).join("/")}`, { method: "DELETE" }); loadLedger(); } catch (e) { alert(e.message); }
   });
   // the drop zone and the progress bar are redrawn with each page, so their events are caught on the page around them
   const input = $("#file"), stage = $("#run"), dropZone = ev => ev.target.closest && ev.target.closest(".drop");
