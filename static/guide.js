@@ -21,6 +21,8 @@ window.Guide = (() => {
   const $ = (s, r = document) => r.querySelector(s);
   const visible = el => el && el.getClientRects().length && getComputedStyle(el).visibility !== "hidden";
   const key = () => `invoice-flow-guide:${(typeof S !== "undefined" && S.me) || "anon"}`;
+  // a section link: in the sidebar on a wide screen, in the bar along the bottom on a phone, whichever is showing
+  const tabLink = name => () => [...document.querySelectorAll(`.tabs a[data-tab="${name}"]`)].find(visible) || null;
   let root, i = 0, steps = [], waitTimer = null, raf = null, demo = null;
 
   /* one page of the processing, explained while it is on screen. The page waits for the person: the tour holds the
@@ -36,9 +38,11 @@ window.Guide = (() => {
     { title: "Hey, I'm Shiven! Welcome to Invoice Flow", next: "Let's go",
       text: "Invoice Flow checks your bills so you don't have to. I'll show you every part of the app and process your first invoice with you, " +
         "one step at a time. <b>Nothing moves on until you tap</b>, so take as long as you like to read." },
-    { target: "#menu", title: "The menu", tap: true,
-      text: () => narrow() ? "Tap the menu to see your folders." : "Tap the menu to open the full sidebar. Tap it again later to shrink it to icons, so the page gets more room.",
-      done: () => narrow() ? document.body.classList.contains("drawer-open") : !document.body.classList.contains("rail") },
+    narrow()
+      ? { target: "#menu", title: "The menu", tap: true, text: "Tap the menu to see your folders.", done: () => document.body.classList.contains("drawer-open") }
+      : { target: ".side-nav", title: "Find your way around", before: () => setRail(false, false),
+          text: "The four parts of Invoice Flow: <b>Dashboard</b>, <b>Process</b>, <b>PO ledger</b> and <b>Rules</b>. The one you're on is yellow. " +
+            "The ☰ menu shrinks the sidebar to icons when you want more room, and brings it back." },
     { target: "#side-folders", title: "Folders", text: "Folders keep invoices together, like Food bills or Rent. Each folder gets its own dashboard, and New folder makes one.",
       after: () => { if (narrow()) setDrawer(false); } },
     { target: ".theme-switch", title: "Light or dark", text: "Pick whichever is easier on your eyes. Invoice Flow remembers your choice." },
@@ -78,7 +82,7 @@ window.Guide = (() => {
       done: () => !!$("#run .wz-stamp") },
     { target: "#run .wz-stamp .stamp", title: "Done! Your first invoice", text: "Every invoice ends with a stamp like this: the decision, " +
       "who made it (the system or a person) and the key details. It's saved in your history and counted on the Dashboard straight away." },
-    { target: '.dock a[data-tab="dashboard"]', title: "The Dashboard", tap: true, text: "Tap <b>Dashboard</b> to see the big picture.",
+    { target: tabLink("dashboard"), title: "The Dashboard", tap: true, text: "Tap <b>Dashboard</b> to see the big picture.",
       done: () => location.hash === "#dashboard" },
     { target: "#tally", title: "Your numbers", text: "At a glance: invoices processed, how many passed with no human touch, the money approved for payment, " +
       "the money held, and how many are waiting for you.",
@@ -104,9 +108,9 @@ window.Guide = (() => {
       text: "One click builds an Excel workbook for exactly what you're looking at: the chosen <b>folder</b> and <b>month</b>. " +
         "Inside: a <b>Summary</b> with charts, an <b>Analytics</b> sheet with everything on this tab, that folder's <b>invoice list</b>, the PO ledger, your vendors and the rejected invoices. " +
         "The charts are real Excel charts, so they're ready for a report." },
-    { target: '.dock a[data-tab="ledger"]', title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors. " +
+    { target: tabLink("ledger"), title: "PO ledger", text: "Every purchase order: its value, how much has been billed so far and what's still open, plus your approved vendors. " +
       "Raise your own with <b>New purchase order</b>, and add a supplier before its first bill with <b>New vendor</b>." },
-    { target: '.dock a[data-tab="rules"]', title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." },
+    { target: tabLink("rules"), title: "Rules", text: "Every check and threshold, written out in plain words, so you always know why an invoice was approved or held." },
     { target: "#guide-start", title: "That's the tour!", next: "Finish", before: () => { if (narrow()) return; setRail(false, false); },
       text: "Upload your own invoices whenever you're ready. If you ever need me again, tap Ask Shiven." },
   ];

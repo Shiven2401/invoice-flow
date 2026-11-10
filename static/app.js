@@ -1017,15 +1017,18 @@ async function loadDashboard() {
   $("#tally").innerHTML = `
     <div class="tile-count"><div class="v">${st.total}</div><div class="l">Invoices processed</div><div class="s">${st.avg_seconds}s average per invoice</div></div>
     <div class="tile-auto"><div class="v">${st.straight_through}%</div><div class="l">Approved with no human touch</div><div class="s">${c.APPROVE} approved in total</div></div>
-    <div class="tile-paid">${money(st.approved_value)}<div class="l">Approved for payment</div><div class="s">gross, including GST</div></div>
+    <div class="tile-paid">${money(st.approved_value)}<div class="l">Approved for payment</div><div class="s">Gross, including GST</div></div>
     <div class="tile-held-amount tile-go-host">${money(st.pending_value)}<div class="l">Held for payment</div>
-      <div class="s">${c.HOLD ? `in ${heldN}, gross, including GST` : "nothing is on hold"}</div>${toHeld(`Show the ${heldN}, ${inr0(st.pending_value)} in all`)}</div>
+      <div class="s">${c.HOLD ? `In ${heldN} · Gross, incl. GST` : "Nothing is on hold"}</div>${toHeld(`Show the ${heldN}, ${inr0(st.pending_value)} in all`)}</div>
     <div class="tile-held tile-go-host"><div class="v">${c.HOLD}</div><div class="l">Waiting for a person</div><div class="s">${inr0(st.pending_value)} on hold</div>
       ${toHeld(`Show the ${heldN}`)}</div>`;
   const tot = Math.max(st.total, 1);
+  $("#split-note").textContent = st.total ? `${st.total} invoice${st.total === 1 ? "" : "s"} processed` : "";
   $("#split").innerHTML = st.total ? `<div class="split" role="img" aria-label="${c.APPROVE} approved, ${c.HOLD} held">
-      <i class="ok" style="width:${c.APPROVE / tot * 100}%"></i><i class="warn" style="width:${c.HOLD / tot * 100}%"></i></div>
-    <div class="split-legend"><div><b style="color:var(--ok)">${c.APPROVE}</b>approved</div><div><b style="color:var(--warn)">${c.HOLD}</b>held for review</div></div>`
+      ${c.APPROVE ? `<i class="ok" style="flex-grow:${c.APPROVE}"></i>` : ""}${c.HOLD ? `<i class="warn" style="flex-grow:${c.HOLD}"></i>` : ""}</div>
+    <div class="split-legend"><div class="ok"><b>${c.APPROVE}</b>Approved</div><div class="warn"><b>${c.HOLD}</b>Held for review</div></div>
+    ${c.HOLD ? `<button class="split-call" type="button" data-show-held><span>${c.HOLD} invoice${c.HOLD === 1 ? " needs" : "s need"} a closer look</span>
+      <span class="split-go">Review invoices <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>` : ""}`
     : `<p class="muted">${S.view.folder != null && !period() ? "Nothing in this folder yet. File an invoice from its stamp page."
       : period() ? "No invoices in this period." : "Nothing processed yet. Process a document to see it here."}</p>`;
   const mx = Math.max(...st.reasons.map(r => r.count), 1);
@@ -1598,7 +1601,7 @@ function setDrawer(open) {
 function wireMenu() {
   let saved = null;
   try { saved = localStorage.getItem("invoice-flow-sidebar"); } catch (e) { /* storage blocked */ }
-  setRail(saved !== "full", false);
+  setRail(saved === "rail", false);                          // the full sidebar unless the person shrank it to icons
   $("#menu").addEventListener("click", () => narrow() ? setDrawer(!document.body.classList.contains("drawer-open"))
                                                       : setRail(!document.body.classList.contains("rail")));
   document.addEventListener("keydown", ev => { if (ev.key === "Escape" && document.body.classList.contains("drawer-open")) setDrawer(false); });
@@ -1624,10 +1627,10 @@ async function init() {
   renderEmpty();
 
   $("#logout").addEventListener("click", async () => { await fetch("/api/logout", { method: "POST" }); location.reload(); });
-  $('.tabs a[data-tab="dashboard"]').addEventListener("click", () => {     // the Dashboard tab means all invoices
+  $$('.tabs a[data-tab="dashboard"]').forEach(a => a.addEventListener("click", () => {     // the Dashboard tab means all invoices
     S.view.folder = null;
     if (location.hash === "#dashboard") { renderFolders(); refreshVisible(); }
-  });
+  }));
   $("#new-folder").addEventListener("click", () => folderDialog({ title: "Folders", current: S.view.folder, pick: async id => openFolder(id) }));
   $("#folders").addEventListener("click", ev => {
     const open = ev.target.closest("[data-folder-open]"), reset = ev.target.closest("[data-folder-reset]");
@@ -1680,7 +1683,7 @@ async function init() {
   setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light", false);
   $$("[data-dash-tab]").forEach(b => b.addEventListener("click", () => dashTab(b.dataset.dashTab)));
   wireAnalytics();
-  $("#tally").addEventListener("click", ev => {            // the arrow on "Waiting for a person": all held invoices, in History
+  $("#dash-overview").addEventListener("click", ev => {    // the tiles' arrows and "Review invoices": all held invoices, in History
     if (!ev.target.closest("[data-show-held]")) return;
     S.filter = "HOLD";
     renderHistory();

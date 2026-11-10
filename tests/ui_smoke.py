@@ -74,11 +74,11 @@ def main():
         pg.screenshot(path=OUT / "05_split_overbilled.png", full_page=True)
 
         for tab in ("dashboard", "ledger", "rules"):
-            pg.click(f'.tabs a[data-tab="{tab}"]')
+            pg.click(f'.tabs a[data-tab="{tab}"]:visible')
             time.sleep(0.8)
             pg.screenshot(path=OUT / f"06_{tab}.png", full_page=True)
 
-        pg.click('.tabs a[data-tab="dashboard"]')
+        pg.click('.tabs a[data-tab="dashboard"]:visible')
         pg.wait_for_selector("tr.click")
         pg.click('tr.click:has-text("13_scanned_missing_date")')
         pg.wait_for_selector("#drawer:not([hidden]) .stamp")
@@ -88,7 +88,7 @@ def main():
 
         # narrow screen
         pg.set_viewport_size({"width": 390, "height": 844})
-        pg.click('.tabs a[data-tab="process"]')
+        pg.click('.tabs a[data-tab="process"]:visible')
         time.sleep(0.5)
         pg.screenshot(path=OUT / "08_mobile.png", full_page=True)
         b.close()
