@@ -1360,6 +1360,7 @@ input[type="text"], input[type="search"], input[type="password"], input[type="nu
 .mini { padding: 4px 10px; border: 0; border-radius: 8px; transform: none; font: 500 12px/17px var(--sans); letter-spacing: 0; text-transform: none; }
 .mini.ok { background: var(--ok-wash); color: var(--ok); }
 #history .mini.ok::before { content: "✓ "; }
+#history .mini { white-space: nowrap; }   /* a badge never breaks onto two lines */
 .mini.warn { background: var(--warn-wash); color: var(--warn); }
 .mini.bad { background: var(--bad-wash); color: var(--bad); }
 .pill { border-radius: 8px; }
