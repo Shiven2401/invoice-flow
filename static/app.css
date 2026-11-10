@@ -1559,9 +1559,17 @@ body.signed-out { background: var(--paper); }
   #history .row-remove { opacity: 0; transition: opacity .12s; }
   #history tr:hover .row-remove, #history .row-remove:focus-visible { opacity: 1; }
 }
+/* the filter card exactly as in the design: selects 164 / 140 / 140px wide, 20px apart, the search right after Outcome taking the rest */
+.filter-bar #folder-pick { width: 164px; }
+.filter-bar #period-kind, .filter-bar #period-pick, .filter-bar #group-by { width: 140px; min-width: 0; }
+.filter-bar .f-search { flex: 1 1 0; min-width: 200px; margin-left: 0; padding-left: 45px; background-position: 18px center; }
+@media (min-width: 1500px) { .filter-bar { flex-wrap: nowrap; } .filter-bar .f { flex: none; } }
+/* a laptop too narrow for the design's single row: the search gets a full row of its own, below the filters */
+@media (max-width: 1499px) and (min-width: 861px) {
+  .filter-bar .f-search { flex-basis: 100%; padding-left: 40px; background-position: 12px center; background-color: var(--field); }
+}
 @media (max-width: 1280px) {
   .page { padding: 28px 28px 104px; }
-  .filter-bar .f-search { flex-basis: 100%; margin-left: 0; padding-left: 40px; background-position: 12px center; background-color: var(--field); }
 }
 @media (max-width: 1100px) and (min-width: 861px) {
   body:not(.signed-out) { grid-template-columns: 232px minmax(0, 1fr); }
