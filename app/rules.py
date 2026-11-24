@@ -344,8 +344,8 @@ def validate(f, d):
 
     inv_date = parse_date(f.get("invoice_date"))
     if inv_date:
-        age = (date.fromisoformat(config.AS_OF) - date.fromisoformat(inv_date)).days
-        checks.append(dict(name="Invoice date is sensible", ok=0 <= age <= RULES["stale_days"], detail=f"{inv_date} ({age} days before {config.AS_OF})"))
+        age = (date.fromisoformat(config.as_of()) - date.fromisoformat(inv_date)).days
+        checks.append(dict(name="Invoice date is sensible", ok=0 <= age <= RULES["stale_days"], detail=f"{inv_date} ({age} days before {config.as_of()})"))
         if age < 0:
             fs.append(F("FUTURE_DATE", "hold", "validate", f"Invoice is dated {inv_date}, which is in the future."))
         elif age > RULES["stale_days"]:

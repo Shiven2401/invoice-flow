@@ -436,3 +436,18 @@ def test_rate_limits_are_waited_out_and_webhook_bursts_become_one_pull(fake, mon
     time.sleep(0.6)
     assert pulls == [False]                                          # five asks, one pull
     assert erp_sync.request_pull(0.1) is True                        # and the next burst gets its own
+
+def test_today_is_the_businesss_today_and_never_frozen(monkeypatch):
+    from app import config
+    monkeypatch.delenv("AS_OF_DATE", raising=False)
+    assert config._tz("+05:30").utcoffset(None) == timedelta(hours=5, minutes=30) and config._tz("-04:00").utcoffset(None) == timedelta(hours=-4)
+    class Clock(datetime):                                           # 20:00 UTC on 24 Nov is already 25 Nov in India
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 11, 24, 20, 0, tzinfo=config.timezone.utc).astimezone(tz)
+    monkeypatch.setattr(config, "datetime", Clock)
+    assert config.as_of() == "2026-11-25"
+    monkeypatch.setattr(config, "APP_TZ_OFFSET", "+00:00")
+    assert config.as_of() == "2026-11-24"
+    monkeypatch.setenv("AS_OF_DATE", "2026-01-31")
+    assert config.as_of() == "2026-01-31"                            # pinned for demos

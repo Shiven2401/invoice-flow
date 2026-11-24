@@ -1020,7 +1020,7 @@ def export_xlsx(user: dict = Depends(auth.current_user), period: str = "", folde
     data = export.workbook(_stats(rows), rows, pos(user)["pos"], rules.load_vendors(user["id"]), period,
                            analytics=_analytics(rows, top=None), folder=folder_name)
     slug = re.sub(r"[^A-Za-z0-9]+", "-", folder_name).strip("-").lower() + "-" if folder_name else ""
-    name = f"invoice-flow-report-{slug}{period or config.AS_OF}.xlsx"
+    name = f"invoice-flow-report-{slug}{period or config.as_of()}.xlsx"
     return Response(data, media_type=XLSX, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
@@ -1028,13 +1028,13 @@ def export_xlsx(user: dict = Depends(auth.current_user), period: str = "", folde
 def vendors_xlsx(user: dict = Depends(auth.current_user)):
     """The approved vendor list on its own, for this account."""
     data = export.approved_vendors(rules.load_vendors(user["id"]), db.list_runs(user["id"], limit=-1))
-    name = f"approved-vendors-{config.AS_OF}.xlsx"
+    name = f"approved-vendors-{config.as_of()}.xlsx"
     return Response(data, media_type=XLSX, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @app.get("/api/config")
 def cfg(user: dict = Depends(auth.current_user)):
-    return dict(rules=config.RULES, as_of=config.AS_OF, buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
+    return dict(rules=config.RULES, as_of=config.as_of(), buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
                                ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
                 stages=[dict(id=i, title=t) for i, t in pipeline.STAGES], erp=_erp_info(user["id"]))

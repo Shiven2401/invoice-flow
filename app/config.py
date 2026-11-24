@@ -4,7 +4,7 @@ Everything a finance lead might want to tune lives in RULES. It is exposed
 read-only in the UI (Rules tab) so the thresholds are visible, not buried.
 """
 import os
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -39,7 +39,23 @@ RULES = {
     "critical_fields": ["vendor_name", "invoice_number", "invoice_date", "total"],
 }
 
-AS_OF = os.getenv("AS_OF_DATE") or date.today().isoformat()
+APP_TZ_OFFSET = os.getenv("APP_TZ_OFFSET", "+05:30")   # the business's clock: India unless set (a fixed offset, no tz database needed)
+
+
+def _tz(offset):
+    sign = -1 if offset.strip().startswith("-") else 1
+    h, _, m = offset.strip().lstrip("+-").partition(":")
+    return timezone(sign * timedelta(hours=int(h or 0), minutes=int(m or 0)))
+
+
+def as_of():
+    """Today, for the invoice-date checks: on the business's clock (an invoice dated today in India at 2 am is not "in
+    the future" because the server runs on UTC), and worked out each time, so a server running for weeks never freezes
+    "today" at the day it started. AS_OF_DATE pins it (demos, tests)."""
+    return os.getenv("AS_OF_DATE") or datetime.now(_tz(APP_TZ_OFFSET)).date().isoformat()
+
+
+AS_OF = as_of()   # as it was when the app started; code asks as_of()
 EXTRACTOR = os.getenv("EXTRACTOR", "auto")          # auto | llm | rules
 EXTRACT_MODEL = os.getenv("EXTRACT_MODEL", "claude-sonnet-5-5")   # with ANTHROPIC_API_KEY
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""

@@ -21,7 +21,8 @@ Optional environment variables. They can also go in a `.env` file in the project
 | `EXTRACTOR` | `auto` (LLM if key, else rules), `llm`, `rules` | `auto` |
 | `EXTRACT_MODEL` | Model used for extraction | `claude-sonnet-5-5` |
 | `STAGE_DELAY` | Seconds of pacing per stage so the live view is watchable (0 = full speed) | `0.35` |
-| `AS_OF_DATE` | Date used for date sanity checks | today |
+| `AS_OF_DATE` | Date used for date sanity checks | today, on the business's clock |
+| `APP_TZ_OFFSET` | The business's clock for "today" (a UTC offset) | `+05:30` (India) |
 | `PORT`, `RUNTIME_DIR` | Port, where the SQLite DB, uploads and logs live | `8000`, `./runtime` |
 | `LOG_LEVEL` | Console log level. `runtime/logs/invoice-flow.log` always keeps DEBUG (rotated at 10 MB, last 5 kept) | `INFO` |
 
