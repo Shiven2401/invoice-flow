@@ -239,7 +239,11 @@ def main():
         doc = extract.read_document(c["path"])
         c["read"] = doc["method"]
         for mode in modes:
-            fields, meta = extract.extract_fields(dict(doc), mode=mode)
+            for attempt in range(6):   # a busy model (503) or a dropped connection is retried: this measures the model, not the network
+                fields, meta = extract.extract_fields(dict(doc), mode=mode)
+                if mode == "rules" or meta["used"] != "rules" or "quota" in " ".join(meta["notes"]).lower():
+                    break
+                time.sleep(10 * (attempt + 1))
             if mode != "rules" and meta["used"] == "rules":
                 print(f"   ! {c['file']}: the model wasn't used ({'; '.join(meta['notes'])[:160]})")
             got = {f: fields.get(f) for f in FIELDS}

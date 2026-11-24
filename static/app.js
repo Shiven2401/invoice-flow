@@ -1130,7 +1130,7 @@ function renderErpStrip() {
     .filter(([c]) => c).map(([c, w]) => `<b>${c}</b> ${w}`);
   box.innerHTML = `<div class="erp-strip-text">${ERP_ICON}<span>Connected to <b>Odoo</b> (${esc(erp.db)}, ${esc(erp.protocol)}).
       ${bills.length ? `${plural(bills.length, "vendor bill")}: ${parts.join(" · ")}.` : "No bills posted yet."}
-      ${notes ? `${plural(notes, "held or rejected invoice")} noted on ${notes === 1 ? "its" : "their"} PO.` : ""}</span></div>
+      ${notes ? `${plural(notes, "held invoice")} noted in Odoo.` : ""}</span></div>
     <div class="erp-strip-links">${extLink(erp.bills, "Bills in Odoo")}${extLink(erp.pos, "Purchase orders")}${erp.contact ? extLink(erp.contact, "Your contact") : ""}</div>`;
 }
 
