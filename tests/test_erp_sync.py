@@ -419,3 +419,20 @@ def test_an_invoice_held_because_odoo_was_down_is_checked_again_when_it_answers(
     again = c.get(f"/api/runs/{r['id']}").json()
     assert again["decision"] == "APPROVE", [x["message"] for x in again["result"]["findings"] if x["severity"] != "info"]
     assert db.outbox_get(op["id"])["status"] == "done" and again["decision"] == "APPROVE" and again["result"]["erp"]["bill_id"] == 1
+
+
+def test_rate_limits_are_waited_out_and_webhook_bursts_become_one_pull(fake, monkeypatch):
+    class R:
+        status_code, text = 429, "Too Many Requests"
+    for k, v in dict(ODOO_URL="https://odoo.test", ODOO_DB="test", ODOO_API_KEY="key").items():
+        monkeypatch.setenv(k, v)
+    monkeypatch.setattr(odoo.requests, "post", lambda *a, **k: R())
+    with pytest.raises(odoo.OdooUnreachable):                       # a pause, not a refusal: the queue retries it
+        odoo._json2("purchase.order", "create", dict(vals_list=[{}]))
+    pulls = []
+    monkeypatch.setattr(erp_sync, "pull_all", lambda full=False: pulls.append(full))
+    monkeypatch.setattr(erp_sync, "_pull_requested", [False])
+    assert [erp_sync.request_pull(0.2) for _ in range(5)] == [True, False, False, False, False]
+    time.sleep(0.6)
+    assert pulls == [False]                                          # five asks, one pull
+    assert erp_sync.request_pull(0.1) is True                        # and the next burst gets its own

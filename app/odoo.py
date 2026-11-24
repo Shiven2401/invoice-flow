@@ -156,8 +156,8 @@ def _xmlrpc(model, method, params):
             raise OdooError("Odoo refused the API key (check ODOO_API_KEY and that the user can use Purchase and Accounting)") from e
         raise OdooError(f"Odoo rejected {model}.{method}: {msg}") from e
     except xmlrpc.client.ProtocolError as e:
-        if e.errcode in (502, 503, 504):
-            raise OdooUnreachable(f"Odoo is unavailable (HTTP {e.errcode})") from e
+        if e.errcode in (429, 502, 503, 504):
+            raise OdooUnreachable(f"Odoo is unavailable or rate-limiting (HTTP {e.errcode})") from e
         raise OdooError(f"Odoo's XML-RPC endpoint answered HTTP {e.errcode}") from e
     except (OSError, xmlrpc.client.ResponseError) as e:   # DNS, refused, timeout, TLS
         raise OdooUnreachable(f"Odoo didn't answer ({type(e).__name__})") from e
@@ -172,6 +172,8 @@ def _json2(model, method, params):
         raise OdooUnreachable(f"Odoo didn't answer ({type(e).__name__})") from e
     if r.status_code in (502, 503, 504):
         raise OdooUnreachable(f"Odoo is unavailable (HTTP {r.status_code})")
+    if r.status_code == 429:   # Odoo Online's rate limit: a pause, not a refusal, so it's retried like an outage
+        raise OdooUnreachable("Odoo is rate-limiting this server (HTTP 429)")
     if r.status_code in (401, 403):
         raise OdooError("Odoo refused the API key (check ODOO_API_KEY and that the user can use Purchase and Accounting)")
     if r.status_code >= 400:

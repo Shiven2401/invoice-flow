@@ -58,7 +58,7 @@ def _fresh():
     last = db.erp_state("last_pull")
     stale = not last or (datetime.now() - datetime.fromisoformat(last)).total_seconds() > 30
     if stale:
-        threading.Thread(target=erp_sync.ensure_fresh, daemon=True).start()
+        erp_sync.request_pull(0)          # one pull, however many screens ask at once
     return dict(last_pull=last, refreshing=stale)
 
 

@@ -44,6 +44,9 @@ def call(model, method, timeout=60, **params):
         try:
             r = requests.post(f"{URL}/json/2/{model}/{method}", json=params, timeout=timeout,
                               headers={"Authorization": f"bearer {KEY}", "X-Odoo-Database": DB})
+            if r.status_code == 429 and attempt < 3:   # Odoo Online's rate limit: wait it out
+                time.sleep(30)
+                continue
             break
         except requests.RequestException:
             if attempt == 3:

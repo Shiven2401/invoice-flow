@@ -197,10 +197,42 @@ def ensure_fresh(max_age=30):
         logger.warning("sync: pull before showing the ERP screen failed: {}", e)
 
 
+_req_lock = threading.Lock()
+_pull_requested = [False]
+_recent = {}                 # (model, id) -> when it was last fetched for a webhook
+COALESCE = 8                 # seconds: a burst of webhooks (a bulk import, a confirmed PO touching lines and receipts) = one pull
+
+
+def request_pull(delay=COALESCE):
+    """Ask for one incremental pull shortly. Requests made meanwhile join it, so Odoo isn't flooded (Odoo Online
+    rate-limits a server that sends too many calls)."""
+    with _req_lock:
+        if _pull_requested[0]:
+            return False
+        _pull_requested[0] = True
+
+    def run():
+        with _req_lock:
+            _pull_requested[0] = False
+        try:
+            pull_all()
+        except Exception as e:                                    # the scheduled pull catches up
+            logger.warning("sync: pull after webhooks failed: {}", e)
+    threading.Timer(delay, run).start()
+    return True
+
+
 def on_webhook(model, rec_id):
     """Odoo says this record changed: fetch it (the request's own data is never trusted), then catch up on what it touched."""
     if model not in MODELS:
         return dict(ignored=model)
+    now = time.time()
+    if now - _recent.get((model, rec_id), 0) < COALESCE:          # the same record again within seconds: the coming pull covers it
+        request_pull()
+        return dict(model=model, id=rec_id, coalesced=True)
+    _recent[(model, rec_id)] = now
+    if len(_recent) > 5000:
+        _recent.clear()
     recs = _fetch(model, [rec_id])
     if not recs:                                                  # deleted, archived, or outside what's mirrored
         row = db.erp_get(model, rec_id)
@@ -209,7 +241,7 @@ def on_webhook(model, rec_id):
         return dict(model=model, id=rec_id, found=False)
     changed = store(model, recs[0])[1]
     db.erp_state("last_webhook", f"{db.now()} {model} {rec_id}")
-    threading.Thread(target=pull_all, daemon=True).start()        # a receipt moves PO quantities and stock: pick those up too
+    request_pull()                                                # a receipt moves PO quantities and stock: pick those up too
     return dict(model=model, id=rec_id, changed=changed)
 
 
