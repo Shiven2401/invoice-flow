@@ -173,6 +173,8 @@ def pull_all(full=False):
         for model in ("res.partner", "product.product", "purchase.order", "stock.picking", "account.move"):
             try:
                 out[model] = pull(model, full=full)
+                if db.erp_state(f"error:{model}"):
+                    db.erp_state(f"error:{model}", "")       # recovered: the Sync tab shows only current problems
             except odoo.OdooError as e:
                 out[model] = dict(error=str(e))
                 db.erp_state(f"error:{model}", f"{db.now()} {e}")
