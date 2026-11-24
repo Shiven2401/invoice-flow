@@ -1,0 +1,7465 @@
+{
+ "n": 120,
+ "seed": 2026,
+ "model": "gemini-3.5-flash-lite",
+ "modes": {
+  "auto": {
+   "field_accuracy": 0.9915074309978769,
+   "fields_scored": 942,
+   "invoices_all_right": 112,
+   "per_field": {
+    "vendor_name": 0.9583333333333334,
+    "vendor_gstin": 0.9833333333333333,
+    "invoice_number": 1.0,
+    "invoice_date": 0.9916666666666667,
+    "po_reference": 1.0,
+    "subtotal": 1.0,
+    "tax_amount": 1.0,
+    "total": 1.0
+   },
+   "by_form": {
+    "pdf": 1.0,
+    "photo": 0.9864864864864865,
+    "scan": 0.9874371859296482
+   },
+   "by_layout": {
+    "classic": 0.9891304347826086,
+    "igst": 0.9970238095238095,
+    "lump": 0.9814814814814815
+   },
+   "read_by_model": 99
+  },
+  "rules": {
+   "field_accuracy": 0.9522292993630573,
+   "fields_scored": 942,
+   "invoices_all_right": 76,
+   "per_field": {
+    "vendor_name": 0.6666666666666666,
+    "vendor_gstin": 1.0,
+    "invoice_number": 1.0,
+    "invoice_date": 0.9916666666666667,
+    "po_reference": 1.0,
+    "subtotal": 0.972972972972973,
+    "tax_amount": 0.990990990990991,
+    "total": 1.0
+   },
+   "by_form": {
+    "pdf": 0.937888198757764,
+    "photo": 0.9459459459459459,
+    "scan": 0.9673366834170855
+   },
+   "by_layout": {
+    "classic": 0.9565217391304348,
+    "igst": 0.9434523809523809,
+    "lump": 0.9629629629629629
+   },
+   "read_by_model": 0
+  }
+ },
+ "cases": [
+  {
+   "file": "inv_001_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "SOS-1090",
+    "invoice_date": "2026-09-06",
+    "po_reference": null,
+    "subtotal": 96990.0,
+    "tax_amount": 27157.2,
+    "total": 124147.2
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "SOS-1090",
+     "invoice_date": "2026-09-06",
+     "po_reference": null,
+     "subtotal": 96990.0,
+     "tax_amount": 27157.2,
+     "total": 124147.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "SOS-1090",
+     "invoice_date": "2026-09-06",
+     "po_reference": null,
+     "subtotal": 96990.0,
+     "tax_amount": 27157.2,
+     "total": 124147.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_002_lump.pdf",
+   "layout": "lump",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "A34691",
+    "invoice_date": "2026-06-20",
+    "po_reference": "PO-2026-1015",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 265.5
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "A34691",
+     "invoice_date": "2026-06-20",
+     "po_reference": "PO-2026-1015",
+     "subtotal": 225.0,
+     "tax_amount": 40.5,
+     "total": 265.5
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "A34691",
+     "invoice_date": "2026-06-20",
+     "po_reference": "PO-2026-1015",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 265.5
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_003_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Nilgiri Tea Traders",
+    "vendor_gstin": "29WOVPW9939J3ZQ",
+    "invoice_number": "696520",
+    "invoice_date": "2026-06-19",
+    "po_reference": "PO-2026-1622",
+    "subtotal": 5440.0,
+    "tax_amount": 272.0,
+    "total": 5712.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "NILGIRI TEA TRADERS",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "696520",
+     "invoice_date": "2026-06-19",
+     "po_reference": "PO-2026-1622",
+     "subtotal": 5440.0,
+     "tax_amount": 272.0,
+     "total": 5712.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NILGIRI TEA TRADERS",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "696520",
+     "invoice_date": "2026-06-19",
+     "po_reference": "PO-2026-1622",
+     "subtotal": 5440.0,
+     "tax_amount": 272.0,
+     "total": 5712.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_004_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Indus Courier Services",
+    "vendor_gstin": "08OYUFP1335E3ZC",
+    "invoice_number": "2026/TX/07554",
+    "invoice_date": "2026-07-19",
+    "po_reference": "PO-2026-1970",
+    "subtotal": 2550.45,
+    "tax_amount": 714.13,
+    "total": 3264.58
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "INDUS COURIER SERVICES",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "2026/TX/07554",
+     "invoice_date": "2026-07-19",
+     "po_reference": "PO-2026-1970",
+     "subtotal": 2550.45,
+     "tax_amount": 714.13,
+     "total": 3264.58
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "INDUS COURIER SERVICES",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "2026/TX/07554",
+     "invoice_date": "2026-07-19",
+     "po_reference": "PO-2026-1970",
+     "subtotal": 2550.45,
+     "tax_amount": 714.13,
+     "total": 3264.58
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_005_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Sahyadri Packaging Pvt Ltd",
+    "vendor_gstin": "33ZQPHG5261Y2ZL",
+    "invoice_number": "INV/26-27/2060",
+    "invoice_date": "2026-10-14",
+    "po_reference": "PO-2026-1122",
+    "subtotal": 158816.0,
+    "tax_amount": 7940.8,
+    "total": 166756.8
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "INV/26-27/2060",
+     "invoice_date": "2026-10-14",
+     "po_reference": "PO-2026-1122",
+     "subtotal": 158816.0,
+     "tax_amount": 7940.8,
+     "total": 166756.8
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "INV/26-27/2060",
+     "invoice_date": "2026-10-14",
+     "po_reference": "PO-2026-1122",
+     "subtotal": 158816.0,
+     "tax_amount": 7940.8,
+     "total": 166756.8
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_006_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Satpura Furniture House",
+    "vendor_gstin": "27OTHCR7539B1ZT",
+    "invoice_number": "2026/TX/18175",
+    "invoice_date": "2026-07-01",
+    "po_reference": "PO-2026-1982",
+    "subtotal": 33935.4,
+    "tax_amount": 6108.37,
+    "total": 40043.77
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "SATPURA FURNITURE HOUSE",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "2026/TX/18175",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1982",
+     "subtotal": 33935.4,
+     "tax_amount": 6108.37,
+     "total": 40043.77
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "2026/TX/18175",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1982",
+     "subtotal": 33935.4,
+     "tax_amount": 6108.37,
+     "total": 40043.77
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_007_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "2026/TX/26343",
+    "invoice_date": "2026-08-12",
+    "po_reference": "PO-2026-1283",
+    "subtotal": 62442.4,
+    "tax_amount": 17483.88,
+    "total": 79926.28
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/26343",
+     "invoice_date": "2026-08-12",
+     "po_reference": "PO-2026-1283",
+     "subtotal": 62442.4,
+     "tax_amount": 17483.88,
+     "total": 79926.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/26343",
+     "invoice_date": "2026-08-12",
+     "po_reference": "PO-2026-1283",
+     "subtotal": 62442.4,
+     "tax_amount": 17483.88,
+     "total": 79926.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_008_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "SOS-4999",
+    "invoice_date": "2026-08-27",
+    "po_reference": "PO-2026-1655",
+    "subtotal": 63033.8,
+    "tax_amount": 11346.08,
+    "total": 74379.88
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-4999",
+     "invoice_date": "2026-08-27",
+     "po_reference": "PO-2026-1655",
+     "subtotal": 63033.8,
+     "tax_amount": 11346.08,
+     "total": 74379.88
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-4999",
+     "invoice_date": "2026-08-27",
+     "po_reference": "PO-2026-1655",
+     "subtotal": 63033.8,
+     "tax_amount": 11346.08,
+     "total": 74379.88
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_009_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "GST/2590/26",
+    "invoice_date": "2026-04-26",
+    "po_reference": null,
+    "subtotal": 24240.65,
+    "tax_amount": 1212.04,
+    "total": 25452.69
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "GST/2590/26",
+     "invoice_date": "2026-04-26",
+     "po_reference": null,
+     "subtotal": 24240.65,
+     "tax_amount": 1212.04,
+     "total": 25452.69
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "GST/2590/26",
+     "invoice_date": "2026-04-26",
+     "po_reference": null,
+     "subtotal": 24240.65,
+     "tax_amount": 1212.04,
+     "total": 25452.69
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_010_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "2026/TX/70932",
+    "invoice_date": "2026-06-06",
+    "po_reference": null,
+    "subtotal": 740.0,
+    "tax_amount": 133.2,
+    "total": 873.2
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/70932",
+     "invoice_date": "2026-06-06",
+     "po_reference": null,
+     "subtotal": 740.0,
+     "tax_amount": 133.2,
+     "total": 873.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/70932",
+     "invoice_date": "2026-06-06",
+     "po_reference": null,
+     "subtotal": 740.0,
+     "tax_amount": 133.2,
+     "total": 873.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_011_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+    "vendor_gstin": "33RZVFA6766F2Z6",
+    "invoice_number": "SOS-5445",
+    "invoice_date": "2026-04-03",
+    "po_reference": "PO-2026-1255",
+    "subtotal": 46669.05,
+    "tax_amount": 8400.42,
+    "total": 55069.47
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "SOS-5445",
+     "invoice_date": "2026-04-03",
+     "po_reference": "PO-2026-1255",
+     "subtotal": 46669.05,
+     "tax_amount": 8400.42,
+     "total": 55069.47
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "SOS-5445",
+     "invoice_date": "2026-04-03",
+     "po_reference": "PO-2026-1255",
+     "subtotal": 46669.05,
+     "tax_amount": 8400.42,
+     "total": 55069.47
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_012_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "2026/TX/89593",
+    "invoice_date": "2026-06-17",
+    "po_reference": "PO-2026-1253",
+    "subtotal": 7519.0,
+    "tax_amount": 2105.32,
+    "total": 9624.32
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS & CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/89593",
+     "invoice_date": "2026-06-17",
+     "po_reference": "PO-2026-1253",
+     "subtotal": 7519.0,
+     "tax_amount": 2105.32,
+     "total": 9624.32
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS & CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/89593",
+     "invoice_date": "2026-06-17",
+     "po_reference": "PO-2026-1253",
+     "subtotal": 7519.0,
+     "tax_amount": 2105.32,
+     "total": 9624.32
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_013_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Marwar Logistics Pvt Ltd",
+    "vendor_gstin": "29KGMHL6843N3ZN",
+    "invoice_number": "604091",
+    "invoice_date": "2026-10-17",
+    "po_reference": "PO-2026-1453",
+    "subtotal": 133868.72,
+    "tax_amount": 6693.44,
+    "total": 140562.16
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "MARWAR LOGISTICS PVT LTD",
+     "vendor_gstin": "29KGMHL6843N3ZN",
+     "invoice_number": "604091",
+     "invoice_date": "2026-10-17",
+     "po_reference": "PO-2026-1453",
+     "subtotal": 133868.72,
+     "tax_amount": 6693.44,
+     "total": 140562.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "MARWAR LOGISTICS PVT LTD",
+     "vendor_gstin": "29KGMHL6843N3ZN",
+     "invoice_number": "604091",
+     "invoice_date": "2026-10-17",
+     "po_reference": "PO-2026-1453",
+     "subtotal": 133868.72,
+     "tax_amount": 6693.44,
+     "total": 140562.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_014_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "2026/TX/84965",
+    "invoice_date": "2026-06-21",
+    "po_reference": "PO-2026-1435",
+    "subtotal": 199450.66,
+    "tax_amount": 35901.12,
+    "total": 235351.78
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/84965",
+     "invoice_date": "2026-06-21",
+     "po_reference": "PO-2026-1435",
+     "subtotal": 199450.66,
+     "tax_amount": 35901.12,
+     "total": 235351.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "2026/TX/84965",
+     "invoice_date": "2026-06-21",
+     "po_reference": "PO-2026-1435",
+     "subtotal": 199450.66,
+     "tax_amount": 35901.12,
+     "total": 235351.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_015_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Sharma Office Supplies Pvt Ltd",
+    "vendor_gstin": "08KQQCH7891U3ZS",
+    "invoice_number": "2026/TX/42810",
+    "invoice_date": "2026-08-22",
+    "po_reference": "PO-2026-1965",
+    "subtotal": 328372.0,
+    "tax_amount": 91944.16,
+    "total": 420316.16
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "2026/TX/42810",
+     "invoice_date": "2026-08-22",
+     "po_reference": "PO-2026-1965",
+     "subtotal": 328372.0,
+     "tax_amount": 91944.16,
+     "total": 420316.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "2026/TX/42810",
+     "invoice_date": "2026-08-22",
+     "po_reference": "PO-2026-1965",
+     "subtotal": 328372.0,
+     "tax_amount": 91944.16,
+     "total": 420316.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_016_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Coromandel Chemicals Ltd",
+    "vendor_gstin": "08DMCCL6790A1ZS",
+    "invoice_number": "GST/9652/26",
+    "invoice_date": "2026-09-07",
+    "po_reference": "PO-2026-1729",
+    "subtotal": 84139.56,
+    "tax_amount": 23559.08,
+    "total": 107698.64
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "GST/9652/26",
+     "invoice_date": "2026-09-07",
+     "po_reference": "PO-2026-1729",
+     "subtotal": 84139.56,
+     "tax_amount": 23559.08,
+     "total": 107698.64
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "GST/9652/26",
+     "invoice_date": "2026-09-07",
+     "po_reference": "PO-2026-1729",
+     "subtotal": 84139.56,
+     "tax_amount": 23559.08,
+     "total": 107698.64
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_017_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Malabar Spices Exports",
+    "vendor_gstin": "27VYUHE1084L3ZR",
+    "invoice_number": "2026/TX/32782",
+    "invoice_date": "2026-05-18",
+    "po_reference": "PO-2026-1501",
+    "subtotal": 152912.0,
+    "tax_amount": 27524.16,
+    "total": 180436.16
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Malabar Spices Exports",
+     "vendor_gstin": "27VYUHE1084L3ZR",
+     "invoice_number": "2026/TX/32782",
+     "invoice_date": "2026-05-18",
+     "po_reference": "PO-2026-1501",
+     "subtotal": 152912.0,
+     "tax_amount": 27524.16,
+     "total": 180436.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27VYUHE1084L3ZR",
+     "invoice_number": "2026/TX/32782",
+     "invoice_date": "2026-05-18",
+     "po_reference": "PO-2026-1501",
+     "subtotal": 152912.0,
+     "tax_amount": 27524.16,
+     "total": 180436.16
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_018_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "INV/26-27/8339",
+    "invoice_date": "2026-06-04",
+    "po_reference": null,
+    "subtotal": 91803.78,
+    "tax_amount": 16524.68,
+    "total": 108328.46
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "INV/26-27/8339",
+     "invoice_date": "2026-06-04",
+     "po_reference": null,
+     "subtotal": 91803.78,
+     "tax_amount": 16524.68,
+     "total": 108328.46
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "INV/26-27/8339",
+     "invoice_date": "2026-06-04",
+     "po_reference": null,
+     "subtotal": 91803.78,
+     "tax_amount": 16524.68,
+     "total": 108328.46
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_019_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Coromandel Chemicals Ltd",
+    "vendor_gstin": "08DMCCL6790A1ZS",
+    "invoice_number": "2026/TX/93899",
+    "invoice_date": "2026-08-31",
+    "po_reference": "PO-2026-1811",
+    "subtotal": 98014.31,
+    "tax_amount": 17642.58,
+    "total": 115656.89
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "2026/TX/93899",
+     "invoice_date": "2026-08-31",
+     "po_reference": "PO-2026-1811",
+     "subtotal": 98014.31,
+     "tax_amount": 17642.58,
+     "total": 115656.89
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "2026/TX/93899",
+     "invoice_date": "2026-08-31",
+     "po_reference": "PO-2026-1811",
+     "subtotal": 98014.31,
+     "tax_amount": 17642.58,
+     "total": 115656.89
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_020_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Himalaya Water Solutions",
+    "vendor_gstin": "33KDPPS3797E3ZP",
+    "invoice_number": "INV/26-27/4594",
+    "invoice_date": "2026-10-03",
+    "po_reference": "PO-2026-1683",
+    "subtotal": 859616.5,
+    "tax_amount": 154730.98,
+    "total": 1014347.48
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "INV/26-27/4594",
+     "invoice_date": "2026-10-03",
+     "po_reference": "PO-2026-1683",
+     "subtotal": 859616.5,
+     "tax_amount": 154730.98,
+     "total": 1014347.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "INV/26-27/4594",
+     "invoice_date": "2026-10-03",
+     "po_reference": "PO-2026-1683",
+     "subtotal": 859616.5,
+     "tax_amount": 154730.98,
+     "total": 1014347.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_021_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Himalaya Water Solutions",
+    "vendor_gstin": "33KDPPS3797E3ZP",
+    "invoice_number": "A1991",
+    "invoice_date": "2026-07-01",
+    "po_reference": "PO-2026-1042",
+    "subtotal": 305762.87,
+    "tax_amount": 36691.54,
+    "total": 342454.41
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "A1991",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1042",
+     "subtotal": 305762.87,
+     "tax_amount": 36691.54,
+     "total": 342454.41
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "A1991",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1042",
+     "subtotal": 305762.87,
+     "tax_amount": 36691.54,
+     "total": 342454.41
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_022_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "A28880",
+    "invoice_date": "2026-05-12",
+    "po_reference": "PO-2026-1992",
+    "subtotal": 127785.84,
+    "tax_amount": 23001.46,
+    "total": 150787.3
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "A28880",
+     "invoice_date": "2026-05-12",
+     "po_reference": "PO-2026-1992",
+     "subtotal": 127785.84,
+     "tax_amount": 23001.46,
+     "total": 150787.3
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "A28880",
+     "invoice_date": "2026-05-12",
+     "po_reference": "PO-2026-1992",
+     "subtotal": 127785.84,
+     "tax_amount": 23001.46,
+     "total": 150787.3
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_023_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "175744",
+    "invoice_date": "2026-09-28",
+    "po_reference": "PO-2026-1638",
+    "subtotal": 348042.5,
+    "tax_amount": 41765.1,
+    "total": 389807.6
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Aravalli Stationery Mart",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "175744",
+     "invoice_date": "2026-09-28",
+     "po_reference": "PO-2026-1638",
+     "subtotal": 348042.5,
+     "tax_amount": 41765.1,
+     "total": 389807.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Aravalli Stationery Mart",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "175744",
+     "invoice_date": "2026-09-28",
+     "po_reference": "PO-2026-1638",
+     "subtotal": 348042.5,
+     "tax_amount": 41765.1,
+     "total": 389807.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_024_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Malabar Spices Exports",
+    "vendor_gstin": "27VYUHE1084L3ZR",
+    "invoice_number": "KEW-7571",
+    "invoice_date": "2026-08-19",
+    "po_reference": "PO-2026-1574",
+    "subtotal": 12044.0,
+    "tax_amount": 1445.28,
+    "total": 13489.28
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "MALABAR SPICES EXPORTS",
+     "vendor_gstin": "27VYUHE1084L3ZR",
+     "invoice_number": "KEW-7571",
+     "invoice_date": "2026-08-19",
+     "po_reference": "PO-2026-1574",
+     "subtotal": 12044.0,
+     "tax_amount": 1445.28,
+     "total": 13489.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27VYUHE1084L3ZR",
+     "invoice_number": "KEW-7571",
+     "invoice_date": "2026-08-19",
+     "po_reference": "PO-2026-1574",
+     "subtotal": 12044.0,
+     "tax_amount": 1445.28,
+     "total": 13489.28
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_025_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "A74974",
+    "invoice_date": "2026-08-22",
+    "po_reference": "PO-2026-1541",
+    "subtotal": 549607.0,
+    "tax_amount": 98929.26,
+    "total": 648536.26
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H129",
+     "invoice_number": "A74974",
+     "invoice_date": "2026-08-22",
+     "po_reference": "PO-2026-1541",
+     "subtotal": 549607.0,
+     "tax_amount": 98929.26,
+     "total": 648536.26
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": false,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "A74974",
+     "invoice_date": "2026-08-22",
+     "po_reference": "PO-2026-1541",
+     "subtotal": 549607.0,
+     "tax_amount": 98929.26,
+     "total": 648536.26
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_026_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Himalaya Water Solutions",
+    "vendor_gstin": "33KDPPS3797E3ZP",
+    "invoice_number": "84580",
+    "invoice_date": "2026-05-10",
+    "po_reference": null,
+    "subtotal": 78848.0,
+    "tax_amount": 14192.64,
+    "total": 93040.64
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "84580",
+     "invoice_date": "2026-05-10",
+     "po_reference": null,
+     "subtotal": 78848.0,
+     "tax_amount": 14192.64,
+     "total": 93040.64
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "84580",
+     "invoice_date": "2026-05-10",
+     "po_reference": null,
+     "subtotal": 78848.0,
+     "tax_amount": 14192.64,
+     "total": 93040.64
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_027_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "GST/7626/26",
+    "invoice_date": "2026-05-10",
+    "po_reference": "PO-2026-1035",
+    "subtotal": 607219.0,
+    "tax_amount": 109299.42,
+    "total": 716518.42
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "GST/7626/26",
+     "invoice_date": "2026-05-10",
+     "po_reference": "PO-2026-1035",
+     "subtotal": 607219.0,
+     "tax_amount": 109299.42,
+     "total": 716518.42
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "GST/7626/26",
+     "invoice_date": "2026-05-10",
+     "po_reference": "PO-2026-1035",
+     "subtotal": 607219.0,
+     "tax_amount": 109299.42,
+     "total": 716518.42
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_028_lump_scan.pdf",
+   "layout": "lump",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+    "vendor_gstin": "33RZVFA6766F2Z6",
+    "invoice_number": "INV/26-27/1732",
+    "invoice_date": "2026-04-07",
+    "po_reference": "PO-2026-1828",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 104178.66
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "INV/26-27/1732",
+     "invoice_date": "2026-04-07",
+     "po_reference": "PO-2026-1828",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 104178.66
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "INV/26-27/1732",
+     "invoice_date": "2026-04-07",
+     "po_reference": "PO-2026-1828",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 104178.66
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_029_lump.jpg",
+   "layout": "lump",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Sharma Office Supplies Pvt Ltd",
+    "vendor_gstin": "08KQQCH7891U3ZS",
+    "invoice_number": "GST/0583/26",
+    "invoice_date": "2026-05-21",
+    "po_reference": "PO-2026-1459",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 105158.81
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Sharma Office Supplies Pvt Ltd",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "GST/0583/26",
+     "invoice_date": "2026-05-21",
+     "po_reference": "PO-2026-1459",
+     "subtotal": 100151.25,
+     "tax_amount": 5007.56,
+     "total": 105158.81
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sharma Office Supplies Pvt Ltd",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "GST/0583/26",
+     "invoice_date": "2026-05-21",
+     "po_reference": "PO-2026-1459",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 105158.81
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_030_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "2026/TX/80970",
+    "invoice_date": "2026-09-14",
+    "po_reference": "PO-2026-1008",
+    "subtotal": 33.51,
+    "tax_amount": 6.04,
+    "total": 39.55
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "2026/TX/80970",
+     "invoice_date": "2026-09-14",
+     "po_reference": "PO-2026-1008",
+     "subtotal": 33.51,
+     "tax_amount": 6.04,
+     "total": 39.55
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "2026/TX/80970",
+     "invoice_date": "2026-09-14",
+     "po_reference": "PO-2026-1008",
+     "subtotal": 33.51,
+     "tax_amount": 6.04,
+     "total": 39.55
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_031_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "A51572",
+    "invoice_date": "2026-08-18",
+    "po_reference": "PO-2026-1016",
+    "subtotal": 6320.0,
+    "tax_amount": 758.4,
+    "total": 7078.4
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "A51572",
+     "invoice_date": "2026-08-18",
+     "po_reference": "PO-2026-1016",
+     "subtotal": 6320.0,
+     "tax_amount": 758.4,
+     "total": 7078.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "A51572",
+     "invoice_date": "2026-08-18",
+     "po_reference": "PO-2026-1016",
+     "subtotal": 6320.0,
+     "tax_amount": 758.4,
+     "total": 7078.4
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_032_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "BTS-8567",
+    "invoice_date": "2026-05-13",
+    "po_reference": "PO-2026-1771",
+    "subtotal": 33680.0,
+    "tax_amount": 6062.4,
+    "total": 39742.4
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Godavari Fresh Fish",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "BTS-8567",
+     "invoice_date": "2026-05-13",
+     "po_reference": "PO-2026-1771",
+     "subtotal": 33680.0,
+     "tax_amount": 6062.4,
+     "total": 39742.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "BTS-8567",
+     "invoice_date": "2026-05-13",
+     "po_reference": "PO-2026-1771",
+     "subtotal": null,
+     "tax_amount": 6062.4,
+     "total": 39742.4
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": false,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_033_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "2026/TX/10908",
+    "invoice_date": "2026-08-19",
+    "po_reference": "PO-2026-1966",
+    "subtotal": 42427.5,
+    "tax_amount": 2121.38,
+    "total": 44548.88
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Godavari Fresh Fish",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "2026/TX/10908",
+     "invoice_date": "2026-08-19",
+     "po_reference": "PO-2026-1966",
+     "subtotal": 42427.5,
+     "tax_amount": 2121.38,
+     "total": 44548.88
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sl Description of Goods/Services HSN/SAC Quantity Rate",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "2026/TX/10908",
+     "invoice_date": "2026-08-19",
+     "po_reference": "PO-2026-1966",
+     "subtotal": 42427.5,
+     "tax_amount": 2121.38,
+     "total": 44548.88
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_034_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "2026/TX/96502",
+    "invoice_date": "2026-04-30",
+    "po_reference": "PO-2026-1030",
+    "subtotal": 424268.25,
+    "tax_amount": 76368.29,
+    "total": 500636.54
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS & CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/96502",
+     "invoice_date": "2026-04-30",
+     "po_reference": "PO-2026-1030",
+     "subtotal": 424268.25,
+     "tax_amount": 76368.29,
+     "total": 500636.54
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS & CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/96502",
+     "invoice_date": "2026-04-30",
+     "po_reference": "PO-2026-1030",
+     "subtotal": 424268.25,
+     "tax_amount": 76368.29,
+     "total": 500636.54
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_035_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Nilgiri Tea Traders",
+    "vendor_gstin": "29WOVPW9939J3ZQ",
+    "invoice_number": "2026/TX/57512",
+    "invoice_date": "2026-07-30",
+    "po_reference": null,
+    "subtotal": 323468.0,
+    "tax_amount": 38816.16,
+    "total": 362284.16
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Nilgiri Tea Traders",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "2026/TX/57512",
+     "invoice_date": "2026-07-30",
+     "po_reference": null,
+     "subtotal": 323468.0,
+     "tax_amount": 38816.16,
+     "total": 362284.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Nilgiri Tea Traders",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "2026/TX/57512",
+     "invoice_date": "2026-07-30",
+     "po_reference": null,
+     "subtotal": 323468.0,
+     "tax_amount": 38816.16,
+     "total": 362284.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_036_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Brahmaputra Tech Solutions Pvt Ltd",
+    "vendor_gstin": "33RZVFA6766F2Z6",
+    "invoice_number": "351239",
+    "invoice_date": "2026-07-15",
+    "po_reference": null,
+    "subtotal": 273565.75,
+    "tax_amount": 49241.83,
+    "total": 322807.58
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "BRAHMAPUTRA TECH SOLUTIONS PVT LTD",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "351239",
+     "invoice_date": "2026-07-15",
+     "po_reference": null,
+     "subtotal": 273565.75,
+     "tax_amount": 49241.83,
+     "total": 322807.58
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33RZVFA6766F2Z6",
+     "invoice_number": "351239",
+     "invoice_date": "2026-07-15",
+     "po_reference": null,
+     "subtotal": 273565.75,
+     "tax_amount": 49241.83,
+     "total": 322807.58
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_037_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Deccan Poultry Farms",
+    "vendor_gstin": "27ONCPS9166D2ZA",
+    "invoice_number": "A50172",
+    "invoice_date": "2026-06-25",
+    "po_reference": "PO-2026-1129",
+    "subtotal": 514241.15,
+    "tax_amount": 143987.52,
+    "total": 658228.67
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "DECCAN POULTRY FARMS",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "A50172",
+     "invoice_date": "2026-06-25",
+     "po_reference": "PO-2026-1129",
+     "subtotal": 514241.15,
+     "tax_amount": 143987.52,
+     "total": 658228.67
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "A50172",
+     "invoice_date": "2026-06-25",
+     "po_reference": "PO-2026-1129",
+     "subtotal": 514241.15,
+     "tax_amount": 143987.52,
+     "total": 658228.67
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_038_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Sahyadri Packaging Pvt Ltd",
+    "vendor_gstin": "33ZQPHG5261Y2ZL",
+    "invoice_number": "A69902",
+    "invoice_date": "2026-04-10",
+    "po_reference": "PO-2026-1014",
+    "subtotal": 70955.9,
+    "tax_amount": 12772.06,
+    "total": 83727.96
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "A69902",
+     "invoice_date": "2026-04-10",
+     "po_reference": "PO-2026-1014",
+     "subtotal": 70955.9,
+     "tax_amount": 12772.06,
+     "total": 83727.96
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "A69902",
+     "invoice_date": "2026-04-10",
+     "po_reference": "PO-2026-1014",
+     "subtotal": 70955.9,
+     "tax_amount": null,
+     "total": 83727.96
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": false,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_039_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "MSE-8505",
+    "invoice_date": "2026-11-08",
+    "po_reference": "PO-2026-1834",
+    "subtotal": 8350.0,
+    "tax_amount": 417.5,
+    "total": 8767.5
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "MSE-8505",
+     "invoice_date": "2026-11-08",
+     "po_reference": "PO-2026-1834",
+     "subtotal": 8350.0,
+     "tax_amount": 417.5,
+     "total": 8767.5
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "MSE-8505",
+     "invoice_date": "2026-11-08",
+     "po_reference": "PO-2026-1834",
+     "subtotal": 8350.0,
+     "tax_amount": 417.5,
+     "total": 8767.5
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_040_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "113248",
+    "invoice_date": "2026-05-26",
+    "po_reference": null,
+    "subtotal": 296946.0,
+    "tax_amount": 53450.28,
+    "total": 350396.28
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "113248",
+     "invoice_date": "2026-05-26",
+     "po_reference": null,
+     "subtotal": 296946.0,
+     "tax_amount": 53450.28,
+     "total": 350396.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "113248",
+     "invoice_date": "2026-05-26",
+     "po_reference": null,
+     "subtotal": 296946.0,
+     "tax_amount": 53450.28,
+     "total": 350396.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_041_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "INV/26-27/0338",
+    "invoice_date": "2026-05-09",
+    "po_reference": "PO-2026-1135",
+    "subtotal": 303441.32,
+    "tax_amount": 54619.44,
+    "total": 358060.76
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "GANGA TEXTILES",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "INV/26-27/0338",
+     "invoice_date": "2026-05-09",
+     "po_reference": "PO-2026-1135",
+     "subtotal": 303441.32,
+     "tax_amount": 54619.44,
+     "total": 358060.76
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "GANGA TEXTILES",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "INV/26-27/0338",
+     "invoice_date": "2026-05-09",
+     "po_reference": "PO-2026-1135",
+     "subtotal": 303441.32,
+     "tax_amount": 54619.44,
+     "total": 358060.76
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_042_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Rathore IT Services LLP",
+    "vendor_gstin": "33HATCD5706D2ZI",
+    "invoice_number": "GST/4065/26",
+    "invoice_date": "2026-07-31",
+    "po_reference": "PO-2026-1559",
+    "subtotal": 1886.0,
+    "tax_amount": 339.48,
+    "total": 2225.48
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "GST/4065/26",
+     "invoice_date": "2026-07-31",
+     "po_reference": "PO-2026-1559",
+     "subtotal": 1886.0,
+     "tax_amount": 339.48,
+     "total": 2225.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "GST/4065/26",
+     "invoice_date": "2026-07-31",
+     "po_reference": "PO-2026-1559",
+     "subtotal": 1886.0,
+     "tax_amount": 339.48,
+     "total": 2225.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_043_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Deccan Poultry Farms",
+    "vendor_gstin": "27ONCPS9166D2ZA",
+    "invoice_number": "2026/TX/55958",
+    "invoice_date": "2026-09-03",
+    "po_reference": "PO-2026-1271",
+    "subtotal": 164556.6,
+    "tax_amount": 29620.19,
+    "total": 194176.79
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "DECCAN POULTRY FARMS",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "2026/TX/55958",
+     "invoice_date": "2026-09-03",
+     "po_reference": "PO-2026-1271",
+     "subtotal": 164556.6,
+     "tax_amount": 29620.19,
+     "total": 194176.79
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "2026/TX/55958",
+     "invoice_date": "2026-09-03",
+     "po_reference": "PO-2026-1271",
+     "subtotal": 164556.6,
+     "tax_amount": 29620.19,
+     "total": 194176.79
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_044_lump_scan.pdf",
+   "layout": "lump",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Nilgiri Tea Traders",
+    "vendor_gstin": "29WOVPW9939J3ZQ",
+    "invoice_number": "2026/TX/27255",
+    "invoice_date": "2026-10-29",
+    "po_reference": "PO-2026-1873",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 49276.21
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Nilgiri Tea Traders",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "2026/TX/27255",
+     "invoice_date": "2026-10-29",
+     "po_reference": "PO-2026-1873",
+     "subtotal": 41759.5,
+     "tax_amount": 7516.71,
+     "total": 49276.21
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Nilgiri Tea Traders",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "2026/TX/27255",
+     "invoice_date": "2026-10-29",
+     "po_reference": "PO-2026-1873",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 49276.21
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_045_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "138747",
+    "invoice_date": "2026-07-01",
+    "po_reference": "PO-2026-1984",
+    "subtotal": 63221.0,
+    "tax_amount": 11379.78,
+    "total": 74600.78
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Aravalli Stationery Mart",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "138747",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1984",
+     "subtotal": 63221.0,
+     "tax_amount": 11379.78,
+     "total": 74600.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "138747",
+     "invoice_date": "2026-07-01",
+     "po_reference": "PO-2026-1984",
+     "subtotal": 63221.0,
+     "tax_amount": 11379.78,
+     "total": 74600.78
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_046_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "A47958",
+    "invoice_date": "2026-07-06",
+    "po_reference": "PO-2026-1584",
+    "subtotal": 170840.0,
+    "tax_amount": 47835.2,
+    "total": 218675.2
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "ARAVALLI STATIONERY MART",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "A47958",
+     "invoice_date": "2026-07-06",
+     "po_reference": "PO-2026-1584",
+     "subtotal": 170840.0,
+     "tax_amount": 47835.2,
+     "total": 218675.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "A47958",
+     "invoice_date": "2026-07-06",
+     "po_reference": "PO-2026-1584",
+     "subtotal": 170840.0,
+     "tax_amount": 47835.2,
+     "total": 218675.2
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_047_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "2026/TX/70829",
+    "invoice_date": "2026-10-18",
+    "po_reference": "PO-2026-1727",
+    "subtotal": 368050.0,
+    "tax_amount": 66249.0,
+    "total": 434299.0
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "2026/TX/70829",
+     "invoice_date": "2026-10-18",
+     "po_reference": "PO-2026-1727",
+     "subtotal": 368050.0,
+     "tax_amount": 66249.0,
+     "total": 434299.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sl Description of Goods/Services HSN/SAC Quantity Rate",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "2026/TX/70829",
+     "invoice_date": "2026-10-18",
+     "po_reference": "PO-2026-1727",
+     "subtotal": 368050.0,
+     "tax_amount": 66249.0,
+     "total": 434299.0
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_048_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "GST/8843/26",
+    "invoice_date": "2026-06-06",
+    "po_reference": null,
+    "subtotal": 78976.6,
+    "tax_amount": 14215.78,
+    "total": 93192.38
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "GST/8843/26",
+     "invoice_date": "2026-06-06",
+     "po_reference": null,
+     "subtotal": 78976.6,
+     "tax_amount": 14215.78,
+     "total": 93192.38
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Ganga Textiles",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "GST/8843/26",
+     "invoice_date": "2026-06-06",
+     "po_reference": null,
+     "subtotal": 78976.6,
+     "tax_amount": 14215.78,
+     "total": 93192.38
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_049_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "GST/6360/26",
+    "invoice_date": "2026-04-14",
+    "po_reference": "PO-2026-1074",
+    "subtotal": 75286.0,
+    "tax_amount": 13551.48,
+    "total": 88837.48
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "GST/6360/26",
+     "invoice_date": "2026-04-14",
+     "po_reference": "PO-2026-1074",
+     "subtotal": 75286.0,
+     "tax_amount": 13551.48,
+     "total": 88837.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "GST/6360/26",
+     "invoice_date": "2026-04-14",
+     "po_reference": "PO-2026-1074",
+     "subtotal": 75286.0,
+     "tax_amount": 13551.48,
+     "total": 88837.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_050_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Sahyadri Packaging Pvt Ltd",
+    "vendor_gstin": "33ZQPHG5261Y2ZL",
+    "invoice_number": "A69663",
+    "invoice_date": "2026-07-04",
+    "po_reference": "PO-2026-1759",
+    "subtotal": 110526.47,
+    "tax_amount": 19894.76,
+    "total": 130421.23
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "A69663",
+     "invoice_date": "2026-07-04",
+     "po_reference": "PO-2026-1759",
+     "subtotal": 110526.47,
+     "tax_amount": 19894.76,
+     "total": 130421.23
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "A69663",
+     "invoice_date": "2026-07-04",
+     "po_reference": "PO-2026-1759",
+     "subtotal": 110526.47,
+     "tax_amount": 19894.76,
+     "total": 130421.23
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_051_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "2026/TX/72412",
+    "invoice_date": "2026-04-08",
+    "po_reference": "PO-2026-1095",
+    "subtotal": 10512.0,
+    "tax_amount": 525.6,
+    "total": 11037.6
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "2026/TX/72412",
+     "invoice_date": "2026-04-08",
+     "po_reference": "PO-2026-1095",
+     "subtotal": 10512.0,
+     "tax_amount": 525.6,
+     "total": 11037.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "2026/TX/72412",
+     "invoice_date": "2026-04-08",
+     "po_reference": "PO-2026-1095",
+     "subtotal": 10512.0,
+     "tax_amount": 525.6,
+     "total": 11037.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_052_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Himalaya Water Solutions",
+    "vendor_gstin": "33KDPPS3797E3ZP",
+    "invoice_number": "TFM-2552",
+    "invoice_date": "2026-04-29",
+    "po_reference": "PO-2026-1891",
+    "subtotal": 3668.8,
+    "tax_amount": 660.38,
+    "total": 4329.18
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "HIMALAYA WATER SOLUTIONS",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "TFM-2552",
+     "invoice_date": "2026-04-29",
+     "po_reference": "PO-2026-1891",
+     "subtotal": 3668.8,
+     "tax_amount": 660.38,
+     "total": 4329.18
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "HIMALAYA WATER SOLUTIONS",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "TFM-2552",
+     "invoice_date": "2026-04-29",
+     "po_reference": "PO-2026-1891",
+     "subtotal": 3668.8,
+     "tax_amount": 660.38,
+     "total": 4329.18
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_053_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Konark Printers",
+    "vendor_gstin": "08AOSCT4257H1ZZ",
+    "invoice_number": "118371",
+    "invoice_date": "2026-08-29",
+    "po_reference": "PO-2026-1403",
+    "subtotal": 516299.78,
+    "tax_amount": 144563.94,
+    "total": 660863.72
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Konark Printers",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "118371",
+     "invoice_date": "2026-08-29",
+     "po_reference": "PO-2026-1403",
+     "subtotal": 516299.78,
+     "tax_amount": 144563.94,
+     "total": 660863.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Konark Printers",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "118371",
+     "invoice_date": "2026-08-29",
+     "po_reference": "PO-2026-1403",
+     "subtotal": 299.78,
+     "tax_amount": 144563.94,
+     "total": 660863.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": false,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_054_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "222409",
+    "invoice_date": "2026-06-12",
+    "po_reference": null,
+    "subtotal": 52418.0,
+    "tax_amount": 9435.24,
+    "total": 61853.24
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "222409",
+     "invoice_date": "2026-06-12",
+     "po_reference": null,
+     "subtotal": 52418.0,
+     "tax_amount": 9435.24,
+     "total": 61853.24
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "222409",
+     "invoice_date": "2026-06-12",
+     "po_reference": null,
+     "subtotal": 52418.0,
+     "tax_amount": 9435.24,
+     "total": 61853.24
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_055_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "GST/1326/26",
+    "invoice_date": "2026-04-25",
+    "po_reference": "PO-2026-1413",
+    "subtotal": 129144.1,
+    "tax_amount": 23245.94,
+    "total": 152390.04
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "LOTUS HOSPITALITY SUPPLIES",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "GST/1326/26",
+     "invoice_date": "2026-04-25",
+     "po_reference": "PO-2026-1413",
+     "subtotal": 129144.1,
+     "tax_amount": 23245.94,
+     "total": 152390.04
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "LOTUS HOSPITALITY SUPPLIES",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "GST/1326/26",
+     "invoice_date": "2026-04-25",
+     "po_reference": "PO-2026-1413",
+     "subtotal": 129144.1,
+     "tax_amount": 23245.94,
+     "total": 152390.04
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_056_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Sharma Office Supplies Pvt Ltd",
+    "vendor_gstin": "08KQQCH7891U3ZS",
+    "invoice_number": "A53879",
+    "invoice_date": "2026-07-29",
+    "po_reference": null,
+    "subtotal": 8900.0,
+    "tax_amount": 2492.0,
+    "total": 11392.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "A53879",
+     "invoice_date": "2026-07-29",
+     "po_reference": null,
+     "subtotal": 8900.0,
+     "tax_amount": 2492.0,
+     "total": 11392.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "A53879",
+     "invoice_date": "2026-07-29",
+     "po_reference": null,
+     "subtotal": 8900.0,
+     "tax_amount": 2492.0,
+     "total": 11392.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_057_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "GST/7777/26",
+    "invoice_date": "2026-06-07",
+    "po_reference": "PO-2026-1758",
+    "subtotal": 8251.99,
+    "tax_amount": 412.6,
+    "total": 8664.59
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "GST/7777/26",
+     "invoice_date": "2026-06-07",
+     "po_reference": "PO-2026-1758",
+     "subtotal": 8251.99,
+     "tax_amount": 412.6,
+     "total": 8664.59
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "GST/7777/26",
+     "invoice_date": "2026-06-07",
+     "po_reference": "PO-2026-1758",
+     "subtotal": 8251.99,
+     "tax_amount": 412.6,
+     "total": 8664.59
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_058_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "2026/TX/28198",
+    "invoice_date": "2026-09-02",
+    "po_reference": "PO-2026-1870",
+    "subtotal": 3799.0,
+    "tax_amount": 683.82,
+    "total": 4482.82
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "KAVERI ENGINEERING WORKS",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "2026/TX/28198",
+     "invoice_date": "2026-09-02",
+     "po_reference": "PO-2026-1870",
+     "subtotal": 3799.0,
+     "tax_amount": 683.82,
+     "total": 4482.82
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "KAVERI ENGINEERING WORKS",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "2026/TX/28198",
+     "invoice_date": "2026-09-02",
+     "po_reference": "PO-2026-1870",
+     "subtotal": 3799.0,
+     "tax_amount": 683.82,
+     "total": 4482.82
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_059_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "TFM-3794",
+    "invoice_date": "2026-06-07",
+    "po_reference": "PO-2026-1472",
+    "subtotal": 82590.0,
+    "tax_amount": 14866.2,
+    "total": 97456.2
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "PUSHKAR HANDICRAFTS",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "TFM-3794",
+     "invoice_date": "2026-06-07",
+     "po_reference": "PO-2026-1472",
+     "subtotal": 82590.0,
+     "tax_amount": 14866.2,
+     "total": 97456.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "PUSHKAR HANDICRAFTS",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "TFM-3794",
+     "invoice_date": "2026-06-07",
+     "po_reference": "PO-2026-1472",
+     "subtotal": 82590.0,
+     "tax_amount": 14866.2,
+     "total": 97456.2
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_060_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "INV/26-27/1961",
+    "invoice_date": "2026-06-10",
+    "po_reference": "PO-2026-1429",
+    "subtotal": 67182.12,
+    "tax_amount": 18810.99,
+    "total": 85993.11
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "ARAVALLI STATIONERY MART",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "INV/26-27/1961",
+     "invoice_date": "2026-06-10",
+     "po_reference": "PO-2026-1429",
+     "subtotal": 67182.12,
+     "tax_amount": 18810.99,
+     "total": 85993.11
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "INV/26-27/1961",
+     "invoice_date": "2026-06-10",
+     "po_reference": "PO-2026-1429",
+     "subtotal": 67182.12,
+     "tax_amount": 18810.99,
+     "total": 85993.11
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_061_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Rathore IT Services LLP",
+    "vendor_gstin": "33HATCD5706D2ZI",
+    "invoice_number": "BTS-4585",
+    "invoice_date": "2026-11-08",
+    "po_reference": "PO-2026-1291",
+    "subtotal": 4340.1,
+    "tax_amount": 520.81,
+    "total": 4860.91
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "BTS-4585",
+     "invoice_date": "2026-11-08",
+     "po_reference": "PO-2026-1291",
+     "subtotal": 4340.1,
+     "tax_amount": 520.81,
+     "total": 4860.91
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "RATHORE IT SERVICES LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "BTS-4585",
+     "invoice_date": "2026-11-08",
+     "po_reference": "PO-2026-1291",
+     "subtotal": 4340.1,
+     "tax_amount": 520.81,
+     "total": 4860.91
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_062_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Coromandel Chemicals Ltd",
+    "vendor_gstin": "08DMCCL6790A1ZS",
+    "invoice_number": "GST/0125/26",
+    "invoice_date": "2026-10-07",
+    "po_reference": "PO-2026-1774",
+    "subtotal": 39292.0,
+    "tax_amount": 1964.6,
+    "total": 41256.6
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "COROMANDEL CHEMICALS LTD",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "GST/0125/26",
+     "invoice_date": "2026-10-07",
+     "po_reference": "PO-2026-1774",
+     "subtotal": 39292.0,
+     "tax_amount": 1964.6,
+     "total": 41256.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "GST/0125/26",
+     "invoice_date": "2026-10-07",
+     "po_reference": "PO-2026-1774",
+     "subtotal": 39292.0,
+     "tax_amount": 1964.6,
+     "total": 41256.6
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_063_lump_scan.pdf",
+   "layout": "lump",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Sharma Office Supplies Pvt Ltd",
+    "vendor_gstin": "08KQQCH7891U3ZS",
+    "invoice_number": "SOS-5208",
+    "invoice_date": "2026-04-11",
+    "po_reference": "PO-2026-1034",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 259112.91
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Sharma Office Supplies Pvt Ltd",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "SOS-5208",
+     "invoice_date": "2026-04-11",
+     "po_reference": "PO-2026-1034",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 259112.91
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sharma Office Supplies Pvt Ltd",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "SOS-5208",
+     "invoice_date": "2026-04-11",
+     "po_reference": "PO-2026-1034",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 259112.91
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_064_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "2026/TX/21845",
+    "invoice_date": "2026-09-25",
+    "po_reference": "PO-2026-1008",
+    "subtotal": 330503.0,
+    "tax_amount": 16525.16,
+    "total": 347028.16
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "2026/TX/21845",
+     "invoice_date": "2026-09-25",
+     "po_reference": "PO-2026-1008",
+     "subtotal": 330503.0,
+     "tax_amount": 16525.16,
+     "total": 347028.16
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "2026/TX/21845",
+     "invoice_date": "2026-09-25",
+     "po_reference": "PO-2026-1008",
+     "subtotal": 330503.0,
+     "tax_amount": 16525.16,
+     "total": 347028.16
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_065_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "BTS-7460",
+    "invoice_date": "2026-06-29",
+    "po_reference": "PO-2026-1802",
+    "subtotal": 86862.0,
+    "tax_amount": 10423.44,
+    "total": 97285.44
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "BTS-7460",
+     "invoice_date": "2026-06-29",
+     "po_reference": "PO-2026-1802",
+     "subtotal": 86862.0,
+     "tax_amount": 10423.44,
+     "total": 97285.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "BTS-7460",
+     "invoice_date": "2026-06-29",
+     "po_reference": "PO-2026-1802",
+     "subtotal": 86862.0,
+     "tax_amount": 10423.44,
+     "total": 97285.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_066_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Indus Courier Services",
+    "vendor_gstin": "08OYUFP1335E3ZC",
+    "invoice_number": "MSE-1750",
+    "invoice_date": "2026-05-15",
+    "po_reference": "PO-2026-1860",
+    "subtotal": 130258.0,
+    "tax_amount": 23446.44,
+    "total": 153704.44
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Indus Courier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "MSE-1750",
+     "invoice_date": "2026-05-15",
+     "po_reference": "PO-2026-1860",
+     "subtotal": 130258.0,
+     "tax_amount": 23446.44,
+     "total": 153704.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Indus Courier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "MSE-1750",
+     "invoice_date": "2026-05-15",
+     "po_reference": "PO-2026-1860",
+     "subtotal": 130258.0,
+     "tax_amount": 23446.44,
+     "total": 153704.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_067_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "432167",
+    "invoice_date": "2026-10-26",
+    "po_reference": null,
+    "subtotal": 42849.0,
+    "tax_amount": 7712.82,
+    "total": 50561.82
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "432167",
+     "invoice_date": "2026-10-26",
+     "po_reference": null,
+     "subtotal": 42849.0,
+     "tax_amount": 7712.82,
+     "total": 50561.82
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "THAR FACILITY MANAGEMENT",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "432167",
+     "invoice_date": "2026-10-26",
+     "po_reference": null,
+     "subtotal": 42849.0,
+     "tax_amount": 7712.82,
+     "total": 50561.82
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_068_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Himalaya Water Solutions",
+    "vendor_gstin": "33KDPPS3797E3ZP",
+    "invoice_number": "436460",
+    "invoice_date": "2026-04-15",
+    "po_reference": "PO-2026-1230",
+    "subtotal": 116038.8,
+    "tax_amount": 20886.98,
+    "total": 136925.78
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Himalaya Water Solutions",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "436460",
+     "invoice_date": "2026-04-15",
+     "po_reference": "PO-2026-1230",
+     "subtotal": 116038.8,
+     "tax_amount": 20886.98,
+     "total": 136925.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "HIMALAYA WATER SOLUTIONS",
+     "vendor_gstin": "33KDPPS3797E3ZP",
+     "invoice_number": "436460",
+     "invoice_date": "2026-04-15",
+     "po_reference": "PO-2026-1230",
+     "subtotal": 116038.8,
+     "tax_amount": 20886.98,
+     "total": 136925.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_069_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "318369",
+    "invoice_date": "2026-04-07",
+    "po_reference": "PO-2026-1028",
+    "subtotal": 2023.22,
+    "tax_amount": 566.5,
+    "total": 2589.72
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Godavari Fresh Fish",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "318369",
+     "invoice_date": "2026-04-07",
+     "po_reference": "PO-2026-1028",
+     "subtotal": 2023.22,
+     "tax_amount": 566.5,
+     "total": 2589.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "318369",
+     "invoice_date": "2026-04-07",
+     "po_reference": "PO-2026-1028",
+     "subtotal": 2023.22,
+     "tax_amount": 566.5,
+     "total": 2589.72
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_070_lump.pdf",
+   "layout": "lump",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "TFM-2446",
+    "invoice_date": "2026-04-07",
+    "po_reference": null,
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 134154.19
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Aravalli Stationery Mart",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "TFM-2446",
+     "invoice_date": "2026-04-07",
+     "po_reference": null,
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 134154.19
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Billed to: Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "TFM-2446",
+     "invoice_date": "2026-04-07",
+     "po_reference": null,
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 134154.19
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_071_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "GST/6600/26",
+    "invoice_date": "2026-07-21",
+    "po_reference": "PO-2026-1705",
+    "subtotal": 139985.0,
+    "tax_amount": 39195.8,
+    "total": 179180.8
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "GST/6600/26",
+     "invoice_date": "2026-07-21",
+     "po_reference": "PO-2026-1705",
+     "subtotal": 139985.0,
+     "tax_amount": 39195.8,
+     "total": 179180.8
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "GST/6600/26",
+     "invoice_date": "2026-07-21",
+     "po_reference": "PO-2026-1705",
+     "subtotal": 139985.0,
+     "tax_amount": 39195.8,
+     "total": 179180.8
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_072_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "618147",
+    "invoice_date": "2026-04-16",
+    "po_reference": "PO-2026-1781",
+    "subtotal": 6350.0,
+    "tax_amount": 1143.0,
+    "total": 7493.0
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "618147",
+     "invoice_date": "2026-04-16",
+     "po_reference": "PO-2026-1781",
+     "subtotal": 6350.0,
+     "tax_amount": 1143.0,
+     "total": 7493.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sl Description of Goods/Services HSN/SAC Quantity Rate",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "618147",
+     "invoice_date": "2026-04-16",
+     "po_reference": "PO-2026-1781",
+     "subtotal": 6350.0,
+     "tax_amount": 1143.0,
+     "total": 7493.0
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_073_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "518051",
+    "invoice_date": "2026-05-03",
+    "po_reference": "PO-2026-1899",
+    "subtotal": 14212.18,
+    "tax_amount": 2558.19,
+    "total": 16770.37
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS & CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "518051",
+     "invoice_date": "2026-05-03",
+     "po_reference": "PO-2026-1899",
+     "subtotal": 14212.18,
+     "tax_amount": 2558.19,
+     "total": 16770.37
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "BHARAT ELECTRICALS&CO",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "518051",
+     "invoice_date": "2026-05-03",
+     "po_reference": "PO-2026-1899",
+     "subtotal": 14212.18,
+     "tax_amount": 2558.19,
+     "total": 16770.37
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_074_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "436156",
+    "invoice_date": "2026-05-14",
+    "po_reference": null,
+    "subtotal": 220960.0,
+    "tax_amount": 39772.8,
+    "total": 260732.8
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "436156",
+     "invoice_date": "2026-05-14",
+     "po_reference": null,
+     "subtotal": 220960.0,
+     "tax_amount": 39772.8,
+     "total": 260732.8
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "436156",
+     "invoice_date": "2026-05-14",
+     "po_reference": null,
+     "subtotal": 220960.0,
+     "tax_amount": 39772.8,
+     "total": 260732.8
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_075_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "INV/26-27/2564",
+    "invoice_date": "2026-07-09",
+    "po_reference": "PO-2026-1360",
+    "subtotal": 70282.0,
+    "tax_amount": 3514.1,
+    "total": 73796.1
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "INV/26-27/2564",
+     "invoice_date": "2026-07-09",
+     "po_reference": "PO-2026-1360",
+     "subtotal": 70282.0,
+     "tax_amount": 3514.1,
+     "total": 73796.1
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "INV/26-27/2564",
+     "invoice_date": "2026-07-09",
+     "po_reference": "PO-2026-1360",
+     "subtotal": 70282.0,
+     "tax_amount": 3514.1,
+     "total": 73796.1
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_076_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "GST/2184/26",
+    "invoice_date": "2026-04-22",
+    "po_reference": "PO-2026-1882",
+    "subtotal": 438719.0,
+    "tax_amount": 78969.42,
+    "total": 517688.42
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "GST/2184/26",
+     "invoice_date": "2026-04-22",
+     "po_reference": "PO-2026-1882",
+     "subtotal": 438719.0,
+     "tax_amount": 78969.42,
+     "total": 517688.42
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "GST/2184/26",
+     "invoice_date": "2026-04-22",
+     "po_reference": "PO-2026-1882",
+     "subtotal": 438719.0,
+     "tax_amount": 78969.42,
+     "total": 517688.42
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_077_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "INV/26-27/4737",
+    "invoice_date": "2026-10-29",
+    "po_reference": "PO-2026-1406",
+    "subtotal": 401446.28,
+    "tax_amount": 48173.56,
+    "total": 449619.84
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "INV/26-27/4737",
+     "invoice_date": "2026-10-29",
+     "po_reference": "PO-2026-1406",
+     "subtotal": 401446.28,
+     "tax_amount": 48173.56,
+     "total": 449619.84
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "INV/26-27/4737",
+     "invoice_date": "2026-10-29",
+     "po_reference": "PO-2026-1406",
+     "subtotal": 401446.28,
+     "tax_amount": 48173.56,
+     "total": 449619.84
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_078_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Coromandel Chemicals Ltd",
+    "vendor_gstin": "08DMCCL6790A1ZS",
+    "invoice_number": "938437",
+    "invoice_date": "2026-06-23",
+    "po_reference": "PO-2026-1920",
+    "subtotal": 36146.0,
+    "tax_amount": 6506.28,
+    "total": 42652.28
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "938437",
+     "invoice_date": "2026-06-23",
+     "po_reference": "PO-2026-1920",
+     "subtotal": 36146.0,
+     "tax_amount": 6506.28,
+     "total": 42652.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "938437",
+     "invoice_date": "2026-06-23",
+     "po_reference": "PO-2026-1920",
+     "subtotal": 36146.0,
+     "tax_amount": 6506.28,
+     "total": 42652.28
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_079_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Konark Printers",
+    "vendor_gstin": "08AOSCT4257H1ZZ",
+    "invoice_number": "640827",
+    "invoice_date": "2026-04-11",
+    "po_reference": null,
+    "subtotal": 203316.07,
+    "tax_amount": 36596.9,
+    "total": 239912.97
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Konark Printers",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "640827",
+     "invoice_date": "2026-04-11",
+     "po_reference": null,
+     "subtotal": 203316.07,
+     "tax_amount": 36596.9,
+     "total": 239912.97
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Konark Printers",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "640827",
+     "invoice_date": "2026-04-11",
+     "po_reference": null,
+     "subtotal": 203316.07,
+     "tax_amount": 36596.9,
+     "total": 239912.97
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_080_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Sharma Office Supplies Pvt Ltd",
+    "vendor_gstin": "08KQQCH7891U3ZS",
+    "invoice_number": "2026/TX/10458",
+    "invoice_date": "2026-10-11",
+    "po_reference": "PO-2026-1391",
+    "subtotal": 475664.0,
+    "tax_amount": 85619.52,
+    "total": 561283.52
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "2026/TX/10458",
+     "invoice_date": "2026-10-11",
+     "po_reference": "PO-2026-1391",
+     "subtotal": 475664.0,
+     "tax_amount": 85619.52,
+     "total": 561283.52
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "SHARMA OFFICE SUPPLIES PVT LTD",
+     "vendor_gstin": "08KQQCH7891U3ZS",
+     "invoice_number": "2026/TX/10458",
+     "invoice_date": "2026-10-11",
+     "po_reference": "PO-2026-1391",
+     "subtotal": 475664.0,
+     "tax_amount": 85619.52,
+     "total": 561283.52
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_081_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "SOS-9614",
+    "invoice_date": "2026-08-13",
+    "po_reference": "PO-2026-1826",
+    "subtotal": 30700.0,
+    "tax_amount": 3684.0,
+    "total": 34384.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-9614",
+     "invoice_date": "2026-08-13",
+     "po_reference": "PO-2026-1826",
+     "subtotal": 30700.0,
+     "tax_amount": 3684.0,
+     "total": 34384.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-9614",
+     "invoice_date": "2026-08-13",
+     "po_reference": "PO-2026-1826",
+     "subtotal": 30700.0,
+     "tax_amount": 3684.0,
+     "total": 34384.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_082_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Satpura Furniture House",
+    "vendor_gstin": "27OTHCR7539B1ZT",
+    "invoice_number": "MSE-8561",
+    "invoice_date": "2026-06-03",
+    "po_reference": "PO-2026-1320",
+    "subtotal": 849953.5,
+    "tax_amount": 237986.98,
+    "total": 1087940.48
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Satpura Furniture House",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "MSE-8561",
+     "invoice_date": "2026-06-03",
+     "po_reference": "PO-2026-1320",
+     "subtotal": 849953.5,
+     "tax_amount": 237986.98,
+     "total": 1087940.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Satpura Furniture House",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "MSE-8561",
+     "invoice_date": "2026-06-03",
+     "po_reference": "PO-2026-1320",
+     "subtotal": 849953.5,
+     "tax_amount": 237986.98,
+     "total": 1087940.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_083_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Deccan Poultry Farms",
+    "vendor_gstin": "27ONCPS9166D2ZA",
+    "invoice_number": "SOS-7176",
+    "invoice_date": "2026-11-05",
+    "po_reference": "PO-2026-1644",
+    "subtotal": 61450.0,
+    "tax_amount": 11061.0,
+    "total": 72511.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "DECCAN POULTRY FARMS",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "SOS-7176",
+     "invoice_date": "2026-11-05",
+     "po_reference": "PO-2026-1644",
+     "subtotal": 61450.0,
+     "tax_amount": 11061.0,
+     "total": 72511.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "DECCAN POULTRY FARMS",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "SOS-7176",
+     "invoice_date": "2026-11-05",
+     "po_reference": "PO-2026-1644",
+     "subtotal": 61450.0,
+     "tax_amount": 11061.0,
+     "total": 72511.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_084_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Indus Courier Services",
+    "vendor_gstin": "08OYUFP1335E3ZC",
+    "invoice_number": "GST/6458/26",
+    "invoice_date": "2026-04-22",
+    "po_reference": "PO-2026-1658",
+    "subtotal": 1935.0,
+    "tax_amount": 348.3,
+    "total": 2283.3
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Indus Courier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "GST/6458/26",
+     "invoice_date": "2026-04-22",
+     "po_reference": "PO-2026-1658",
+     "subtotal": 1935.0,
+     "tax_amount": 348.3,
+     "total": 2283.3
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Indus Courier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "GST/6458/26",
+     "invoice_date": "2026-04-22",
+     "po_reference": "PO-2026-1658",
+     "subtotal": 1935.0,
+     "tax_amount": 348.3,
+     "total": 2283.3
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_085_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "BTS-3188",
+    "invoice_date": "2026-05-14",
+    "po_reference": "PO-2026-1092",
+    "subtotal": 10511.04,
+    "tax_amount": 525.56,
+    "total": 11036.6
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "BTS-3188",
+     "invoice_date": "2026-05-14",
+     "po_reference": "PO-2026-1092",
+     "subtotal": 10511.04,
+     "tax_amount": 525.56,
+     "total": 11036.6
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "BTS-3188",
+     "invoice_date": "2026-05-14",
+     "po_reference": "PO-2026-1092",
+     "subtotal": 10511.04,
+     "tax_amount": 525.56,
+     "total": 11036.6
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_086_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "SOS-8143",
+    "invoice_date": "2026-07-05",
+    "po_reference": "PO-2026-1631",
+    "subtotal": 979100.0,
+    "tax_amount": 274148.0,
+    "total": 1253248.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-8143",
+     "invoice_date": "2026-07-05",
+     "po_reference": "PO-2026-1631",
+     "subtotal": 979100.0,
+     "tax_amount": 274148.0,
+     "total": 1253248.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "SOS-8143",
+     "invoice_date": "2026-07-05",
+     "po_reference": "PO-2026-1631",
+     "subtotal": 100.0,
+     "tax_amount": 274148.0,
+     "total": 1253248.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": false,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_087_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "569054",
+    "invoice_date": "2026-08-03",
+    "po_reference": null,
+    "subtotal": 169767.05,
+    "tax_amount": 47534.78,
+    "total": 217301.83
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "569054",
+     "invoice_date": "2026-08-03",
+     "po_reference": null,
+     "subtotal": 169767.05,
+     "tax_amount": 47534.78,
+     "total": 217301.83
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "569054",
+     "invoice_date": "2026-08-03",
+     "po_reference": null,
+     "subtotal": 169767.05,
+     "tax_amount": 47534.78,
+     "total": 217301.83
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_088_lump_scan.pdf",
+   "layout": "lump",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "MSE-8480",
+    "invoice_date": "2026-09-30",
+    "po_reference": "PO-2026-1854",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 84594.94
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "MSE-8480",
+     "invoice_date": "2026-09-30",
+     "po_reference": "PO-2026-1854",
+     "subtotal": 71690.63,
+     "tax_amount": 12904.31,
+     "total": 84594.94
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "MSE-8480",
+     "invoice_date": "2026-09-30",
+     "po_reference": "PO-2026-1854",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 84594.94
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_089_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Lotus Hospitality Supplies",
+    "vendor_gstin": "36FVFPI7969T2Z7",
+    "invoice_number": "962562",
+    "invoice_date": "2026-09-07",
+    "po_reference": "PO-2026-1590",
+    "subtotal": 53828.0,
+    "tax_amount": 9689.04,
+    "total": 63517.04
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFP17969T2Z7",
+     "invoice_number": "962562",
+     "invoice_date": "2026-09-07",
+     "po_reference": "PO-2026-1590",
+     "subtotal": 53828.0,
+     "tax_amount": 9689.04,
+     "total": 63517.04
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": false,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Lotus Hospitality Supplies",
+     "vendor_gstin": "36FVFPI7969T2Z7",
+     "invoice_number": "962562",
+     "invoice_date": "2026-09-07",
+     "po_reference": "PO-2026-1590",
+     "subtotal": 53828.0,
+     "tax_amount": 9689.04,
+     "total": 63517.04
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_090_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "INV/26-27/9013",
+    "invoice_date": "2026-06-30",
+    "po_reference": null,
+    "subtotal": 47560.78,
+    "tax_amount": 8560.94,
+    "total": 56121.72
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "VINDHYA STEEL FABRICATORS",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "INV/26-27/9013",
+     "invoice_date": "2026-06-30",
+     "po_reference": null,
+     "subtotal": 47560.78,
+     "tax_amount": 8560.94,
+     "total": 56121.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "INV/26-27/9013",
+     "invoice_date": "2026-06-30",
+     "po_reference": null,
+     "subtotal": 47560.78,
+     "tax_amount": 8560.94,
+     "total": 56121.72
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_091_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Satpura Furniture House",
+    "vendor_gstin": "27OTHCR7539B1ZT",
+    "invoice_number": "411018",
+    "invoice_date": "2026-06-24",
+    "po_reference": "PO-2026-1221",
+    "subtotal": 14900.0,
+    "tax_amount": 1788.0,
+    "total": 16688.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "SATPURA FURNITURE HOUSE",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "411018",
+     "invoice_date": "2026-06-24",
+     "po_reference": "PO-2026-1221",
+     "subtotal": 14900.0,
+     "tax_amount": 1788.0,
+     "total": 16688.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "411018",
+     "invoice_date": "2026-06-24",
+     "po_reference": "PO-2026-1221",
+     "subtotal": 14900.0,
+     "tax_amount": 1788.0,
+     "total": 16688.0
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_092_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Ganga Textiles",
+    "vendor_gstin": "33RVBHK8498D2ZF",
+    "invoice_number": "A99198",
+    "invoice_date": "2026-07-16",
+    "po_reference": "PO-2026-1363",
+    "subtotal": 439741.27,
+    "tax_amount": 79153.43,
+    "total": 518894.7
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "GANGA TEXTILES",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "A99198",
+     "invoice_date": "2026-07-16",
+     "po_reference": "PO-2026-1363",
+     "subtotal": 439741.27,
+     "tax_amount": 79153.43,
+     "total": 518894.7
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "GANGA TEXTILES",
+     "vendor_gstin": "33RVBHK8498D2ZF",
+     "invoice_number": "A99198",
+     "invoice_date": "2026-07-16",
+     "po_reference": "PO-2026-1363",
+     "subtotal": 439741.27,
+     "tax_amount": 79153.43,
+     "total": 518894.7
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_093_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "136473",
+    "invoice_date": "2026-06-09",
+    "po_reference": "PO-2026-1554",
+    "subtotal": 27538.15,
+    "tax_amount": 4956.86,
+    "total": 32495.01
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Godavari Fresh Fish",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "136473",
+     "invoice_date": "2026-06-09",
+     "po_reference": "PO-2026-1554",
+     "subtotal": 27538.15,
+     "tax_amount": 4956.86,
+     "total": 32495.01
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "136473",
+     "invoice_date": "2026-06-09",
+     "po_reference": "PO-2026-1554",
+     "subtotal": 27538.15,
+     "tax_amount": 4956.86,
+     "total": 32495.01
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_094_igst.pdf",
+   "layout": "igst",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "604561",
+    "invoice_date": "2026-04-21",
+    "po_reference": "PO-2026-1414",
+    "subtotal": 15105.0,
+    "tax_amount": 2718.9,
+    "total": 17823.9
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "ARAVALLI STATIONERY MART",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "604561",
+     "invoice_date": "2026-04-21",
+     "po_reference": "PO-2026-1414",
+     "subtotal": 15105.0,
+     "tax_amount": 2718.9,
+     "total": 17823.9
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "604561",
+     "invoice_date": "2026-04-21",
+     "po_reference": "PO-2026-1414",
+     "subtotal": 15105.0,
+     "tax_amount": 2718.9,
+     "total": 17823.9
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_095_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "432740",
+    "invoice_date": "2026-04-20",
+    "po_reference": null,
+    "subtotal": 112449.7,
+    "tax_amount": 20240.94,
+    "total": 132690.64
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "432740",
+     "invoice_date": "2026-04-20",
+     "po_reference": null,
+     "subtotal": 112449.7,
+     "tax_amount": 20240.94,
+     "total": 132690.64
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "432740",
+     "invoice_date": "2026-04-20",
+     "po_reference": null,
+     "subtotal": 112449.7,
+     "tax_amount": 20240.94,
+     "total": 132690.64
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_096_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Vindhya Steel Fabricators",
+    "vendor_gstin": "33XPCHP7064D1ZW",
+    "invoice_number": "A39806",
+    "invoice_date": "2026-07-22",
+    "po_reference": "PO-2026-1398",
+    "subtotal": 46061.39,
+    "tax_amount": 8291.06,
+    "total": 54352.45
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "A39806",
+     "invoice_date": "2026-07-22",
+     "po_reference": "PO-2026-1398",
+     "subtotal": 46061.39,
+     "tax_amount": 8291.06,
+     "total": 54352.45
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Vindhya Steel Fabricators",
+     "vendor_gstin": "33XPCHP7064D1ZW",
+     "invoice_number": "A39806",
+     "invoice_date": "2026-07-22",
+     "po_reference": "PO-2026-1398",
+     "subtotal": 46061.39,
+     "tax_amount": 8291.06,
+     "total": 54352.45
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_097_igst.jpg",
+   "layout": "igst",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "GST/4156/26",
+    "invoice_date": "2026-10-31",
+    "po_reference": "PO-2026-1506",
+    "subtotal": 197824.0,
+    "tax_amount": 35608.32,
+    "total": 233432.32
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "GODAVARI FRESH FISH",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "GST/4156/26",
+     "invoice_date": "2026-10-31",
+     "po_reference": "PO-2026-1506",
+     "subtotal": 197824.0,
+     "tax_amount": 35608.32,
+     "total": 233432.32
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "GST/4156/26",
+     "invoice_date": "2026-10-31",
+     "po_reference": "PO-2026-1506",
+     "subtotal": 197824.0,
+     "tax_amount": 35608.32,
+     "total": 233432.32
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_098_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "KEW-5081",
+    "invoice_date": "2026-07-27",
+    "po_reference": "PO-2026-1402",
+    "subtotal": 95780.85,
+    "tax_amount": 17240.55,
+    "total": 113021.4
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "KEW-5081",
+     "invoice_date": "2026-07-27",
+     "po_reference": "PO-2026-1402",
+     "subtotal": 95780.85,
+     "tax_amount": 17240.55,
+     "total": 113021.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NARMADA AGRO INDUSTRIES",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "KEW-5081",
+     "invoice_date": "2026-07-27",
+     "po_reference": "PO-2026-1402",
+     "subtotal": 95780.85,
+     "tax_amount": 17240.55,
+     "total": 113021.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_099_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "A67411",
+    "invoice_date": "2026-11-16",
+    "po_reference": null,
+    "subtotal": 278811.0,
+    "tax_amount": 33457.32,
+    "total": 312268.32
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Bharat Electricals & Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "A67411",
+     "invoice_date": "2026-11-16",
+     "po_reference": null,
+     "subtotal": 278811.0,
+     "tax_amount": 33457.32,
+     "total": 312268.32
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Bharat Electricals & Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "A67411",
+     "invoice_date": "2026-11-16",
+     "po_reference": null,
+     "subtotal": 278811.0,
+     "tax_amount": 33457.32,
+     "total": 312268.32
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_100_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Satpura Furniture House",
+    "vendor_gstin": "27OTHCR7539B1ZT",
+    "invoice_number": "MSE-8527",
+    "invoice_date": "2026-04-08",
+    "po_reference": "PO-2026-1589",
+    "subtotal": 329600.17,
+    "tax_amount": 16480.0,
+    "total": 346080.17
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Satpura Furniture House",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "MSE-8527",
+     "invoice_date": "2026-04-08",
+     "po_reference": "PO-2026-1589",
+     "subtotal": 329600.17,
+     "tax_amount": 16480.0,
+     "total": 346080.17
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27OTHCR7539B1ZT",
+     "invoice_number": "MSE-8527",
+     "invoice_date": "2026-04-08",
+     "po_reference": "PO-2026-1589",
+     "subtotal": 329600.17,
+     "tax_amount": 16480.0,
+     "total": 346080.17
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_101_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "479417",
+    "invoice_date": "2026-08-02",
+    "po_reference": "PO-2026-1178",
+    "subtotal": 454547.03,
+    "tax_amount": 22727.36,
+    "total": 477274.39
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "479417",
+     "invoice_date": "2026-08-02",
+     "po_reference": "PO-2026-1178",
+     "subtotal": 454547.03,
+     "tax_amount": 22727.36,
+     "total": 477274.39
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "2 Housekeeping services - monthly",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "479417",
+     "invoice_date": "2026-08-02",
+     "po_reference": "PO-2026-1178",
+     "subtotal": 454547.03,
+     "tax_amount": 22727.36,
+     "total": 477274.39
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_102_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Rathore IT Services LLP",
+    "vendor_gstin": "33HATCD5706D2ZI",
+    "invoice_number": "BTS-1758",
+    "invoice_date": "2026-10-17",
+    "po_reference": null,
+    "subtotal": 7300.0,
+    "tax_amount": 1314.0,
+    "total": 8614.0
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "BTS-1758",
+     "invoice_date": "2026-10-17",
+     "po_reference": null,
+     "subtotal": 7300.0,
+     "tax_amount": 1314.0,
+     "total": 8614.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "BTS-1758",
+     "invoice_date": "2026-10-17",
+     "po_reference": null,
+     "subtotal": 7300.0,
+     "tax_amount": 1314.0,
+     "total": 8614.0
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_103_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Sahyadri Packaging Pvt Ltd",
+    "vendor_gstin": "33ZQPHG5261Y2ZL",
+    "invoice_number": "GST/5560/26",
+    "invoice_date": "2026-10-18",
+    "po_reference": "PO-2026-1927",
+    "subtotal": 146669.3,
+    "tax_amount": 26400.48,
+    "total": 173069.78
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "GST/5560/26",
+     "invoice_date": "2026-10-18",
+     "po_reference": "PO-2026-1927",
+     "subtotal": 146669.3,
+     "tax_amount": 26400.48,
+     "total": 173069.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Sahyadri Packaging Pvt Ltd",
+     "vendor_gstin": "33ZQPHG5261Y2ZL",
+     "invoice_number": "GST/5560/26",
+     "invoice_date": "2026-10-18",
+     "po_reference": "PO-2026-1927",
+     "subtotal": 146669.3,
+     "tax_amount": 26400.48,
+     "total": 173069.78
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_104_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Rathore IT Services LLP",
+    "vendor_gstin": "33HATCD5706D2ZI",
+    "invoice_number": "2026/TX/56297",
+    "invoice_date": "2026-07-30",
+    "po_reference": "PO-2026-1595",
+    "subtotal": 4627.68,
+    "tax_amount": 231.38,
+    "total": 4859.06
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "llm:gemini-3.5-flash-lite",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "2026/TX/56297",
+     "invoice_date": "2026-07-30",
+     "po_reference": "PO-2026-1595",
+     "subtotal": 4627.68,
+     "tax_amount": 231.38,
+     "total": 4859.06
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "2026/TX/56297",
+     "invoice_date": "2026-07-30",
+     "po_reference": "PO-2026-1595",
+     "subtotal": 4627.68,
+     "tax_amount": 231.38,
+     "total": 4859.06
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_105_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Rathore IT Services LLP",
+    "vendor_gstin": "33HATCD5706D2ZI",
+    "invoice_number": "2026/TX/58916",
+    "invoice_date": "2026-11-03",
+    "po_reference": null,
+    "subtotal": 97880.0,
+    "tax_amount": 27406.4,
+    "total": 125286.4
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "2026/TX/58916",
+     "invoice_date": "2026-11-03",
+     "po_reference": null,
+     "subtotal": 97880.0,
+     "tax_amount": 27406.4,
+     "total": 125286.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Rathore IT Services LLP",
+     "vendor_gstin": "33HATCD5706D2ZI",
+     "invoice_number": "2026/TX/58916",
+     "invoice_date": "2026-11-03",
+     "po_reference": null,
+     "subtotal": 97880.0,
+     "tax_amount": 27406.4,
+     "total": 125286.4
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_106_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "GST/9641/26",
+    "invoice_date": "2026-08-16",
+    "po_reference": "PO-2026-1035",
+    "subtotal": 74958.0,
+    "tax_amount": 13492.44,
+    "total": 88450.44
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Bharat Electricals &Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "GST/9641/26",
+     "invoice_date": "2026-08-16",
+     "po_reference": "PO-2026-1035",
+     "subtotal": 74958.0,
+     "tax_amount": 13492.44,
+     "total": 88450.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Bharat Electricals &Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "GST/9641/26",
+     "invoice_date": "2026-08-16",
+     "po_reference": "PO-2026-1035",
+     "subtotal": 74958.0,
+     "tax_amount": 13492.44,
+     "total": 88450.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_107_lump.pdf",
+   "layout": "lump",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Bharat Electricals & Co",
+    "vendor_gstin": "29QWPPN4318K2ZF",
+    "invoice_number": "2026/TX/42605",
+    "invoice_date": "2026-04-01",
+    "po_reference": "PO-2026-1452",
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 930.95
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Bharat Electricals & Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/42605",
+     "invoice_date": "2026-04-01",
+     "po_reference": "PO-2026-1452",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 930.95
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Bharat Electricals & Co",
+     "vendor_gstin": "29QWPPN4318K2ZF",
+     "invoice_number": "2026/TX/42605",
+     "invoice_date": "2026-04-01",
+     "po_reference": "PO-2026-1452",
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 930.95
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_108_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Nilgiri Tea Traders",
+    "vendor_gstin": "29WOVPW9939J3ZQ",
+    "invoice_number": "GST/8849/26",
+    "invoice_date": "2026-06-12",
+    "po_reference": null,
+    "subtotal": 401291.9,
+    "tax_amount": 72232.54,
+    "total": 473524.44
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NILGIRI TEA TRADERS",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "GST/8849/26",
+     "invoice_date": "2026-06-12",
+     "po_reference": null,
+     "subtotal": 401291.9,
+     "tax_amount": 72232.54,
+     "total": 473524.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "NILGIRI TEA TRADERS",
+     "vendor_gstin": "29WOVPW9939J3ZQ",
+     "invoice_number": "GST/8849/26",
+     "invoice_date": "2026-06-12",
+     "po_reference": null,
+     "subtotal": 401291.9,
+     "tax_amount": 72232.54,
+     "total": 473524.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_109_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Kaveri Engineering Works",
+    "vendor_gstin": "08WQVCW8035R1ZI",
+    "invoice_number": "A69391",
+    "invoice_date": "2026-07-14",
+    "po_reference": "PO-2026-1324",
+    "subtotal": 12663.0,
+    "tax_amount": 633.14,
+    "total": 13296.14
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "A69391",
+     "invoice_date": "2026-07-14",
+     "po_reference": "PO-2026-1324",
+     "subtotal": 12663.0,
+     "tax_amount": 633.14,
+     "total": 13296.14
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Kaveri Engineering Works",
+     "vendor_gstin": "08WQVCW8035R1ZI",
+     "invoice_number": "A69391",
+     "invoice_date": "2026-07-14",
+     "po_reference": "PO-2026-1324",
+     "subtotal": 12663.0,
+     "tax_amount": 633.14,
+     "total": 13296.14
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_110_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "203622",
+    "invoice_date": "2026-10-23",
+    "po_reference": "PO-2026-1571",
+    "subtotal": 45141.0,
+    "tax_amount": 12639.48,
+    "total": 57780.48
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "203622",
+     "invoice_date": "2026-10-23",
+     "po_reference": "PO-2026-1571",
+     "subtotal": 45141.0,
+     "tax_amount": 12639.48,
+     "total": 57780.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "203622",
+     "invoice_date": "2026-10-23",
+     "po_reference": "PO-2026-1571",
+     "subtotal": 45141.0,
+     "tax_amount": 12639.48,
+     "total": 57780.48
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_111_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Aravalli Stationery Mart",
+    "vendor_gstin": "29XERFP3149V3Z0",
+    "invoice_number": "INV/26-27/8025",
+    "invoice_date": "2026-10-04",
+    "po_reference": "PO-2026-1709",
+    "subtotal": 124735.06,
+    "tax_amount": 34925.82,
+    "total": 159660.88
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "INV/26-27/8025",
+     "invoice_date": "2026-10-04",
+     "po_reference": "PO-2026-1709",
+     "subtotal": 124735.06,
+     "tax_amount": 34925.82,
+     "total": 159660.88
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "29XERFP3149V3Z0",
+     "invoice_number": "INV/26-27/8025",
+     "invoice_date": "2026-10-04",
+     "po_reference": "PO-2026-1709",
+     "subtotal": 124735.06,
+     "tax_amount": 34925.82,
+     "total": 159660.88
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_112_igst_scan.pdf",
+   "layout": "igst",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Deccan Poultry Farms",
+    "vendor_gstin": "27ONCPS9166D2ZA",
+    "invoice_number": "374268",
+    "invoice_date": "2026-06-25",
+    "po_reference": "PO-2026-1521",
+    "subtotal": 522854.64,
+    "tax_amount": 26142.73,
+    "total": 548997.37
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "374268",
+     "invoice_date": "2026-06-25",
+     "po_reference": "PO-2026-1521",
+     "subtotal": 522854.64,
+     "tax_amount": 26142.73,
+     "total": 548997.37
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "374268",
+     "invoice_date": "2026-06-25",
+     "po_reference": "PO-2026-1521",
+     "subtotal": 522854.64,
+     "tax_amount": 26142.73,
+     "total": 548997.37
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_113_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Coromandel Chemicals Ltd",
+    "vendor_gstin": "08DMCCL6790A1ZS",
+    "invoice_number": "A45912",
+    "invoice_date": "2026-10-27",
+    "po_reference": "PO-2026-1089",
+    "subtotal": 11384.58,
+    "tax_amount": 1366.14,
+    "total": 12750.72
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "A45912",
+     "invoice_date": "2026-10-27",
+     "po_reference": "PO-2026-1089",
+     "subtotal": 11384.58,
+     "tax_amount": 1366.14,
+     "total": 12750.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Coromandel Chemicals Ltd",
+     "vendor_gstin": "08DMCCL6790A1ZS",
+     "invoice_number": "A45912",
+     "invoice_date": "2026-10-27",
+     "po_reference": "PO-2026-1089",
+     "subtotal": 11384.58,
+     "tax_amount": 1366.14,
+     "total": 12750.72
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_114_lump_scan.pdf",
+   "layout": "lump",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Konark Printers",
+    "vendor_gstin": "08AOSCT4257H1ZZ",
+    "invoice_number": "TFM-6473",
+    "invoice_date": "2026-07-06",
+    "po_reference": null,
+    "subtotal": null,
+    "tax_amount": null,
+    "total": 1106971.79
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Billed to: Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "TFM-6473",
+     "invoice_date": "2026-07-06",
+     "po_reference": null,
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 1106971.79
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Billed to: Sunrise Hotels Pvt Ltd",
+     "vendor_gstin": "08AOSCT4257H1ZZ",
+     "invoice_number": "TFM-6473",
+     "invoice_date": "2026-07-06",
+     "po_reference": null,
+     "subtotal": null,
+     "tax_amount": null,
+     "total": 1106971.79
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_115_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Pushkar Handicrafts",
+    "vendor_gstin": "33DQZHD4511H1Z9",
+    "invoice_number": "A90896",
+    "invoice_date": "2026-04-12",
+    "po_reference": "PO-2026-1686",
+    "subtotal": 90743.35,
+    "tax_amount": 10889.2,
+    "total": 101632.55
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "A90896",
+     "invoice_date": "2026-04-12",
+     "po_reference": "PO-2026-1686",
+     "subtotal": 90743.35,
+     "tax_amount": 10889.2,
+     "total": 101632.55
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Pushkar Handicrafts",
+     "vendor_gstin": "33DQZHD4511H1Z9",
+     "invoice_number": "A90896",
+     "invoice_date": "2026-04-12",
+     "po_reference": "PO-2026-1686",
+     "subtotal": 90743.35,
+     "tax_amount": 10889.2,
+     "total": 101632.55
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_116_classic.pdf",
+   "layout": "classic",
+   "form": "pdf",
+   "truth": {
+    "vendor_name": "Thar Facility Management Co",
+    "vendor_gstin": "08RRJHO3308W3ZT",
+    "invoice_number": "957033",
+    "invoice_date": "2026-04-24",
+    "po_reference": "PO-2026-1684",
+    "subtotal": 133889.0,
+    "tax_amount": 6694.44,
+    "total": 140583.44
+   },
+   "read": "text_layer",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "957033",
+     "invoice_date": "2026-04-24",
+     "po_reference": "PO-2026-1684",
+     "subtotal": 133889.0,
+     "tax_amount": 6694.44,
+     "total": 140583.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Thar Facility Management Co",
+     "vendor_gstin": "08RRJHO3308W3ZT",
+     "invoice_number": "957033",
+     "invoice_date": "2026-04-24",
+     "po_reference": "PO-2026-1684",
+     "subtotal": 133889.0,
+     "tax_amount": 6694.44,
+     "total": 140583.44
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_117_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Godavari Fresh Fish",
+    "vendor_gstin": "33MQIPS8851S3ZD",
+    "invoice_number": "2026/TX/98641",
+    "invoice_date": "2026-07-16",
+    "po_reference": "PO-2026-1451",
+    "subtotal": 70144.26,
+    "tax_amount": 19640.4,
+    "total": 89784.66
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "2026/TX/98641",
+     "invoice_date": "2026-07-16",
+     "po_reference": "PO-2026-1451",
+     "subtotal": 70144.26,
+     "tax_amount": 19640.4,
+     "total": 89784.66
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "33MQIPS8851S3ZD",
+     "invoice_number": "2026/TX/98641",
+     "invoice_date": "2026-07-16",
+     "po_reference": "PO-2026-1451",
+     "subtotal": 70144.26,
+     "tax_amount": 19640.4,
+     "total": 89784.66
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_118_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Deccan Poultry Farms",
+    "vendor_gstin": "27ONCPS9166D2ZA",
+    "invoice_number": "GST/8391/26",
+    "invoice_date": "2026-09-16",
+    "po_reference": "PO-2026-1102",
+    "subtotal": 821359.06,
+    "tax_amount": 98563.08,
+    "total": 919922.14
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "GST/8391/26",
+     "invoice_date": "2026-09-16",
+     "po_reference": "PO-2026-1102",
+     "subtotal": 821359.06,
+     "tax_amount": 98563.08,
+     "total": 919922.14
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Orbit Retail Pvt Ltd",
+     "vendor_gstin": "27ONCPS9166D2ZA",
+     "invoice_number": "GST/8391/26",
+     "invoice_date": "2026-09-16",
+     "po_reference": "PO-2026-1102",
+     "subtotal": 821359.06,
+     "tax_amount": 98563.08,
+     "total": 919922.14
+    },
+    "right": {
+     "vendor_name": false,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_119_classic_scan.pdf",
+   "layout": "classic",
+   "form": "scan",
+   "truth": {
+    "vendor_name": "Indus Courier Services",
+    "vendor_gstin": "08OYUFP1335E3ZC",
+    "invoice_number": "2026/TX/46993",
+    "invoice_date": "2026-10-25",
+    "po_reference": "PO-2026-1620",
+    "subtotal": 130833.52,
+    "tax_amount": 36633.38,
+    "total": 167466.9
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "IndusCourier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "2026/TX/46993",
+     "invoice_date": null,
+     "po_reference": "PO-2026-1620",
+     "subtotal": 130833.52,
+     "tax_amount": 36633.38,
+     "total": 167466.9
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": false,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "IndusCourier Services",
+     "vendor_gstin": "08OYUFP1335E3ZC",
+     "invoice_number": "2026/TX/46993",
+     "invoice_date": null,
+     "po_reference": "PO-2026-1620",
+     "subtotal": 130833.52,
+     "tax_amount": 36633.38,
+     "total": 167466.9
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": false,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  },
+  {
+   "file": "inv_120_classic.jpg",
+   "layout": "classic",
+   "form": "photo",
+   "truth": {
+    "vendor_name": "Narmada Agro Industries",
+    "vendor_gstin": "29FEZHQ7750N1ZG",
+    "invoice_number": "2026/TX/28245",
+    "invoice_date": "2026-06-16",
+    "po_reference": null,
+    "subtotal": 94298.0,
+    "tax_amount": 4714.9,
+    "total": 99012.9
+   },
+   "read": "ocr",
+   "auto": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "2026/TX/28245",
+     "invoice_date": "2026-06-16",
+     "po_reference": null,
+     "subtotal": 94298.0,
+     "tax_amount": 4714.9,
+     "total": 99012.9
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   },
+   "rules": {
+    "used": "rules",
+    "got": {
+     "vendor_name": "Narmada Agro Industries",
+     "vendor_gstin": "29FEZHQ7750N1ZG",
+     "invoice_number": "2026/TX/28245",
+     "invoice_date": "2026-06-16",
+     "po_reference": null,
+     "subtotal": 94298.0,
+     "tax_amount": 4714.9,
+     "total": 99012.9
+    },
+    "right": {
+     "vendor_name": true,
+     "vendor_gstin": true,
+     "invoice_number": true,
+     "invoice_date": true,
+     "po_reference": true,
+     "subtotal": true,
+     "tax_amount": true,
+     "total": true
+    }
+   }
+  }
+ ]
+}
