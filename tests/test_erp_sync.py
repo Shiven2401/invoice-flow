@@ -196,7 +196,7 @@ def fake(monkeypatch):
     monkeypatch.setattr(odoo_trail, "_tried", {})
     monkeypatch.setattr(odoo_trail, "sync_user_later", lambda uid: None)
     with db._lock:
-        for table in ("erp_records", "erp_outbox", "erp_state"):
+        for table in ("erp_records", "erp_outbox", "erp_state", "invoice_bills", "vendor_odoo", "activity"):
             db.conn().execute(f"DELETE FROM {table}")
         db.conn().commit()
     return f
@@ -396,14 +396,15 @@ def test_an_invoice_held_because_odoo_was_down_is_checked_again_when_it_answers(
     spec.loader.exec_module(t_odoo)
     Funcs, ODOO_CASES, run, wait = t_odoo.FakeOdoo, t_odoo.ODOO_CASES, t_odoo.run, t_odoo.wait
     f = Funcs()
-    f.contacts, f.attachments, f.notes, f.refuse_notes = [], [], [], False
-    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states", "inbox_contact"):
+    f.contacts, f.attachments, f.notes, f.refuse_notes, f.created_partners = [], [], [], False, []
+    for name in t_odoo.BILL_FUNCS:
         monkeypatch.setattr(odoo, name, getattr(f, name))
     monkeypatch.setattr(odoo, "_call", lambda *a, **k: (_ for _ in ()).throw(odoo.OdooUnreachable("down")) if f.down else 0)
     for k, v in dict(ODOO_URL="https://odoo.test", ODOO_DB="test", ODOO_API_KEY="key", ODOO_ACCOUNTS="").items():
         monkeypatch.setenv(k, v)
     with db._lock:
-        db.conn().execute("DELETE FROM erp_outbox")
+        for table in ("erp_outbox", "invoice_bills", "vendor_odoo", "activity"):
+            db.conn().execute(f"DELETE FROM {table}")
         db.conn().commit()
     c = client("asha")
     f.down = True

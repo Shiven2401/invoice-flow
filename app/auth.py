@@ -64,7 +64,8 @@ def _start_session(response, user_id):
     odoo_trail.sync_user_later(user_id)   # an account connected to Odoo becomes a contact there (once; in the background)
     token = secrets.token_urlsafe(32)
     now_ts = time.time()
-    db.add_session(_digest(token), user_id, now_ts + config.SESSION_DAYS * 86400, now_ts)
+    # each login gets its own session id, for the activity log (which invoices were uploaded and decided in which session)
+    db.add_session(_digest(token), user_id, now_ts + config.SESSION_DAYS * 86400, now_ts, session_id="s-" + secrets.token_hex(6))
     response.set_cookie(COOKIE, token, max_age=config.SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=config.COOKIE_SECURE, path="/")
 
 

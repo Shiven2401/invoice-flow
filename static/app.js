@@ -386,13 +386,13 @@ function recheckPanels(run) {
       <div class="row"><button class="btn primary" type="button" data-treat-invoice>Yes, check it as an invoice</button></div></div>` : "";
   if (open && erpOn()) {                                     // Odoo is the source of truth: fix it there, then check again
     const why = has("ERP_UNREACHABLE") || has("ERP_POST_FAILED") ? "Odoo didn't answer last time. Check again once it's back; nothing has been posted."
-      : has("VENDOR_UNKNOWN") ? `This vendor isn't in Odoo. Add it there${f.vendor_gstin ? ` with GSTIN ${esc(f.vendor_gstin)}` : ""}, then check the invoice again.`
+      : has("VENDOR_UNKNOWN") ? `This vendor isn't approved yet. Approve it below (it's then created in Odoo${f.vendor_gstin ? ` with GSTIN ${esc(f.vendor_gstin)}` : ", once it has a GSTIN"}), or add it in Odoo and check again.`
       : has("QTY_NOT_RECEIVED") ? "Once the rest of the goods are received in Odoo, check again: the 3-way match uses what Odoo shows as received."
       : "After fixing it in Odoo (the vendor, the PO or the receipt), check again: every check runs against what Odoo says now.";
     out += `<div class="resolve vendor-approve" data-role="erp-recheck"><p>Check again against Odoo</p><p class="sub">${why}</p>
       <div class="row"><button class="btn primary" type="button" data-recheck>Check again</button></div></div>`;
   }
-  if (open && has("VENDOR_UNKNOWN") && !erpOn()) out += `<div class="resolve vendor-approve" data-role="vendor-approve"><p>Approve this vendor</p>
+  if (open && has("VENDOR_UNKNOWN")) out += `<div class="resolve vendor-approve" data-role="vendor-approve"><p>Approve this vendor</p>
       <p class="sub">Adds it to your approved list${f.vendor_gstin ? ` with GSTIN ${esc(f.vendor_gstin)}` : ""} and checks this invoice again. Later bills from it pass the vendor check on their own.</p>
       <div class="row"><input type="text" data-role="vendor-name" maxlength="200" value="${esc(f.vendor_name || "")}" aria-label="Vendor name" placeholder="Vendor name">
         <input type="text" data-role="vendor-note" maxlength="500" placeholder="How was this vendor verified? (optional)" aria-label="How was this vendor verified?"></div>
@@ -594,7 +594,7 @@ class Wizard {
     if (check.status === "approved") return `<p class="wz-vendor ok"><span class="tick">✓</span> ${erp ? "A vendor in Odoo" : "On your approved vendor list"} as <b>${esc(check.name)}</b>.</p>`;
     if (check.status === "blocked") return `<p class="wz-vendor bad"><b>${esc(check.name)}</b> is a blocked vendor${erp ? " (tagged Blocked in Odoo)" : ""}, so this invoice will be rejected.</p>`;
     if (erp && (check.status === "unknown" || check.status === "no_identity"))
-      return `<p class="wz-vendor warn">This vendor isn't in Odoo. Add it there with its GSTIN; after the checks you can check the invoice again.</p>`;
+      return `<p class="wz-vendor warn">This vendor isn't approved yet. After the checks you can approve it here; it's then created in Odoo too (with its GSTIN).</p>`;
     if (check.status !== "unknown" && check.status !== "no_identity") return `<p class="wz-vendor warn">The vendor doesn't cleanly match your approved list. The checks will say why.</p>`;
     if (check.status === "unknown" && ((S.runs.get(this.id) || {}).approvals || {}).vendors)
       return `<p class="wz-vendor ok"><span class="tick">✓</span> Not on your approved list yet. It will be added when the checks run, as approved on the Approvals step.</p>`;
@@ -1073,7 +1073,7 @@ async function loadDashboard() {
   const rs = await api("/api/runs"), f = S.view.folder;
   // rejected documents stay off the Dashboard; a folder's Dashboard covers only what was filed in it
   S.history = rs.runs.filter(r => eff(r) !== "REJECT" && (f == null || r.folder_id === f));
-  if (S.view.dashTab === "analytics") dashTab("analytics");
+  if (S.view.dashTab === "analytics" || S.view.dashTab === "activity") dashTab(S.view.dashTab);
   $("#dash-title").textContent = f == null ? "All invoices" : folderName(f) || "Folder";
   renderErpStrip();
   renderPeriods();
@@ -1371,17 +1371,41 @@ function dashTab(name) {
   $("#filter-bar").classList.toggle("on-analytics", name === "analytics");   // the History filters have nothing to filter there
   updateFilterCount();
   $("#dash-analytics").hidden = name !== "analytics";
+  $("#dash-activity").hidden = name !== "activity";
+  $("#filter-bar").hidden = name === "activity";                  // the activity log has its own columns, not these filters
   if (name === "analytics") loadAnalytics();
+  if (name === "activity") loadActivity();
+}
+
+/* the activity log: one row per invoice per login session (uploaded, decided), with its Odoo bill */
+async function loadActivity() {
+  const box = $("#dash-activity");
+  try {
+    const { rows, session_id } = await api("/api/activity");
+    const when = v => v ? esc(v.replace("T", " ").slice(0, 16)) : "–";
+    box.innerHTML = `<div class="table-head"><h2>Activity log</h2><span class="count-pill">${rows.length} row${rows.length === 1 ? "" : "s"}</span>
+        <a class="btn" href="/api/activity.csv" download>Download CSV</a></div>
+      <p class="muted">One row per invoice per login session: uploaded in one session and decided in another makes two rows. Odoo keeps one bill per invoice.</p>
+      <div class="table-wrap"><table class="greenbar activity-table"><thead><tr><th>Session</th><th>File</th><th>Invoice no.</th><th>Vendor</th><th>Decision</th><th>By</th>
+        <th>Reason</th><th>Uploaded</th><th>Decided</th><th>Odoo bill</th><th>Sync</th></tr></thead><tbody>
+      ${rows.length ? rows.map(r => { const d = DEC[r.decision], now = r.session_id === session_id; return `<tr${now ? " class=\"this-session\"" : ""}>
+        <td><code>${esc(r.session_id)}</code>${now ? " <span class=\"muted\">(now)</span>" : ""}</td><td>${esc(r.filename || "–")}</td>
+        <td>${esc(r.invoice_number || "–")}</td><td>${esc(r.vendor || "–")}</td><td>${d ? `<span class="mini ${d.cls}">${d.label}</span>` : esc(r.decision || "–")}</td>
+        <td>${esc(r.decided_by || "–")}</td><td class="activity-reason">${esc(r.reason || "–")}</td><td>${when(r.uploaded_at)}</td><td>${when(r.decided_at)}</td>
+        <td>${r.odoo_bill_id ? (S.cfg.erp ? extLink(`${S.cfg.erp.bills}/${r.odoo_bill_id}`, `#${r.odoo_bill_id}`) : `#${r.odoo_bill_id}`) : "–"}</td>
+        <td class="muted">${esc(r.sync_status || "–")}</td></tr>`; }).join("")
+        : `<tr><td class="empty-row" colspan="11">Nothing yet. Invoices you upload from now on are logged here, per login session.</td></tr>`}</tbody></table></div>`;
+  } catch (e) { box.innerHTML = `<p class="auth-error">${esc(e.message)}</p>`; }
 }
 
 /* ------------------------------------------------------------------ ledger -- */
 let LEDGER = { pos: [], vendors: [] };                     // what the PO ledger page last showed, for its two forms
 
 async function loadLedger() {
-  $$("#add-po, #add-vendor, [data-add-vendor]").forEach(b => { b.hidden = erpOn(); });   // known at sign-in: no flash while Odoo answers
+  $$("#add-po").forEach(b => { b.hidden = erpOn(); });   // POs: on the Odoo ERP page. Vendors are approved here either way (and go to Odoo)
   const { pos, vendors, erp } = LEDGER = await api("/api/pos");
   // connected to Odoo: vendors and POs are Odoo's, so they're added and changed there, and "billed" is Odoo's own count
-  $$("#add-po, #add-vendor, [data-add-vendor]").forEach(b => { b.hidden = !!erp; });
+  $$("#add-po").forEach(b => { b.hidden = !!erp; });
   const src = $("#ledger-source");
   src.hidden = !erp;
   src.innerHTML = erp ? `${ERP_ICON}<span>Vendors and purchase orders come from <b>Odoo</b> (${esc(erp.db)}): add, change or approve them on the
@@ -1561,7 +1585,7 @@ function closeLightbox() {
 /* ------------------------------------------------------------------ routing -- */
 function route() {
   const tab = (location.hash || "#process").slice(1);
-  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) || (tab === "erp" && erpOn()) ? tab : "process";
+  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) || (tab === "erp" && (erpOn() || (S.cfg && S.cfg.erp_preview))) ? tab : "process";
   $$(".view").forEach(v => v.hidden = v.id !== `view-${name}`);
   $$(".tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.tab === name));
   $$(".tabs a").forEach(a => a.dataset.tab === name ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
@@ -1571,7 +1595,7 @@ function route() {
 function refreshVisible() {
   const tab = (location.hash || "#process").slice(1);
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
-  else if (tab === "erp" && erpOn()) loadErp();
+  else if (tab === "erp" && (erpOn() || S.cfg.erp_preview)) loadErp();
 }
 
 /* ------------------------------------------------------------ sort and filter sheet -- */
@@ -1722,8 +1746,8 @@ async function init() {
   wireSheet();
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
-  $$("[data-erp-nav]").forEach(a => { a.hidden = !S.cfg.erp; });   // the Odoo ERP page, for an account connected to Odoo
-  if (S.cfg.erp) wireErp();
+  $$("[data-erp-nav]").forEach(a => { a.hidden = !(S.cfg.erp || S.cfg.erp_preview); });   // the Odoo ERP page (before connecting: its preview)
+  if (S.cfg.erp || S.cfg.erp_preview) wireErp();
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
   $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
     + (S.cfg.erp ? `<br>Connected to ${extLink(S.cfg.erp.home, "<b>Odoo</b>")} (${esc(S.cfg.erp.db)})` : "")

@@ -5,7 +5,8 @@
 
 const ERP = { tab: "overview", from: "", to: "", vendor: "", q: "", state: "", sort: {}, vendors: [], products: [], options: null, status: null, again: 0 };
 const ERP_TABS = [["overview", "Overview"], ["pos", "Purchase orders"], ["inventory", "Inventory"], ["receipts", "Receipts"],
-  ["partners", "Vendors & products"], ["bills", "Bills"], ["sync", "Sync"]];
+  ["partners", "Vendors & products"], ["bills", "Bills"], ["sync", "Sync"], ["preview", "Sync preview"]];
+const previewOnly = () => !erpOn() && !!(S.cfg && S.cfg.erp_preview);   // not connected yet: only what syncing would do
 const PO_PILL = { draft: "pen", sent: "pen", "to approve": "warn", purchase: "ok", done: "ok", cancel: "bad" };
 const SYNC_PILL = { synced: ["Synced", "ok"], pending: ["Waiting for Odoo", "warn"], error: ["Sync failed", "bad"], conflict: ["Conflict", "bad"], deleted: ["Gone from Odoo", "bad"] };
 const RECEIPT_LABEL = { pending: "Not received", partial: "Partly received", full: "Received" };
@@ -53,7 +54,15 @@ function filtersBar() {
 }
 
 async function loadErp() {
-  if (!erpOn()) { location.hash = "#process"; return; }
+  if (!erpOn() && !previewOnly()) { location.hash = "#process"; return; }
+  if (previewOnly()) {                                     // before connecting: the dry run, and nothing that writes
+    ERP.tab = "preview";
+    $$("#erp-tabs [data-erp-tab]").forEach(b => b.setAttribute("aria-selected", "true"));
+    $("#erp-sub").innerHTML = "Preview only: this account isn't connected to Odoo yet, so nothing is written there. Below is what connecting would do.";
+    $("#erp-sync-now").hidden = true; $("#erp-open-odoo").hidden = true; $("#erp-filters").hidden = true;
+    try { await erpPreview($("#erp-body")); } catch (e) { $("#erp-body").innerHTML = `<p class="auth-error">${esc(e.message)}</p>`; }
+    return;
+  }
   $$("#erp-tabs [data-erp-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.erpTab === ERP.tab));
   const st = ERP.status = await api("/api/erp/status");
   $("#erp-sub").innerHTML = `${esc(st.db)} at ${extLink(st.home, esc(st.url.replace(/^https?:\/\//, "")))} over ${esc(st.protocol)} · mirrored ${st.last_pull ? esc(st.last_pull.replace("T", " ").slice(0, 16)) : "not yet"}`
@@ -64,7 +73,8 @@ async function loadErp() {
   const body = $("#erp-body");
   let fresh = null;
   try {
-    fresh = await ({ overview: erpOverview, pos: erpPos, inventory: erpInventory, receipts: erpReceipts, partners: erpPartners, bills: erpBills, sync: erpSync }[ERP.tab])(body);
+    fresh = await ({ overview: erpOverview, pos: erpPos, inventory: erpInventory, receipts: erpReceipts, partners: erpPartners, bills: erpBills, sync: erpSync,
+      preview: erpPreview }[ERP.tab])(body);
   } catch (e) { body.innerHTML = `<p class="auth-error">${esc(e.message)}</p>`; }
   // the mirror was older than 30 s: the server is refreshing it from Odoo, so look again shortly (once)
   if (fresh && fresh.refreshing && ERP.again < 1) { ERP.again++; setTimeout(() => { if (location.hash === "#erp") loadErp(); }, 3500); }
@@ -215,6 +225,40 @@ async function erpSync(body) {
   return null;
 }
 
+/* ---------------------------------------------- the dry run: what syncing would do -- */
+async function erpPreview(body) {
+  body.innerHTML = `<p class="muted">Working out what would happen (Odoo is only read)...</p>`;
+  const p = await api("/api/erp/preview"), v = p.vendor_summary, b = p.bill_summary;
+  const can = p.connected && ERP.status && ERP.status.approver;
+  const ACT = { match: ["Match", "ok"], create: ["Create in Odoo", "warn"], skip: ["Skip", "bad"], "linked already": ["Linked", "ok"] };
+  body.innerHTML = `${tiles([["Vendors matched", v.match, "already in Odoo (GSTIN, then name)"], ["Vendors to create", v.create, "approved here, not in Odoo"],
+      ["Vendors skipped", v.skip, "no GSTIN, or blocked"], ["Linked already", v.linked],
+      ["Draft bills (approved)", b.draft_approved], ["Draft bills (on hold)", b.draft_on_hold], ["Cancelled bills (rejected)", b.cancelled_rejected],
+      ["Duplicates", b.duplicate_notes, "a note on the original's bill"], ["Value of these invoices", inr0(b.total_amount), `${b.already_billed} already have a bill`]])}
+    <div class="erp-actions"><a class="btn" href="/api/erp/preview.csv" download>Download the preview (CSV)</a>
+      ${can ? `<button class="btn" type="button" data-erp-apply="vendors">Send the vendors to Odoo</button>
+        <button class="btn primary" type="button" data-erp-apply="backfill">Make the bills for old invoices</button>` : ""}
+      <span class="muted">${p.connected ? "Connected: new decisions go to Odoo as they're made. Old invoices only when you choose to." :
+        "Nothing has been written to Odoo. Once you say yes, this account is connected and these happen."}</span></div>
+    <div class="card-head"><h2>Vendors</h2><span class="card-note">Your approved list: the master list and the vendors approved in Invoice Flow</span></div>
+    ${erpTable("pv-vendors", [
+      { key: "vendor_id", label: "ID" }, { key: "name", label: "Name", html: r => esc(r.clean_name) + (r.clean_name !== r.name ? ` <span class="muted">(was "${esc(r.name)}")</span>` : "") },
+      { key: "gstin", label: "GSTIN", html: r => esc(r.gstin || "none") }, { key: "list", label: "List" },
+      { key: "action", label: "In Odoo", html: r => { const [t, c] = ACT[r.action] || [r.action, "pen"]; return pill(t, c) + (r.odoo_id ? ` #${r.odoo_id}` : ""); } },
+      { key: "why", label: "Why" }], p.vendors, "No vendors.")}
+    <div class="card-head"><h2>Names cleaned</h2><span class="card-note">Labels such as "Restaurant Name:" removed (in extraction too)</span></div>
+    ${erpTable("pv-names", [{ key: "before", label: "As read" }, { key: "after", label: "Cleaned" }, { key: "where", label: "Seen in", html: r => esc(r.where.join(", ")) }],
+      p.cleaned_names, "No names needed cleaning.")}
+    <div class="card-head"><h2>Invoices already decided</h2><span class="card-note">The backfill list: made in Odoo only when you say so</span></div>
+    ${erpTable("pv-invoices", [
+      { key: "file", label: "File" }, { key: "vendor", label: "Vendor" }, { key: "invoice_number", label: "Invoice no.", html: r => esc(r.invoice_number || "–") },
+      { key: "decision", label: "Decision", html: r => { const d = DEC[r.decision]; return d ? `<span class="mini ${d.cls}">${d.label}</span>` : esc(r.decision); } },
+      { key: "amount", label: "Amount", cls: "right", html: r => r.amount != null ? inr(r.amount) : "–" },
+      { key: "bill_state", label: "Odoo bill", html: r => r.has_bill ? "has a bill" : `${esc(r.bill_action)} <span class="muted">(${esc(r.bill_state)})</span>` },
+      { key: "bill_vendor", label: "Bill vendor" }, { key: "reasons", label: "Reasons" }], p.invoices, "No decided invoices.")}`;
+  return null;
+}
+
 /* ------------------------------------------------------------ one purchase order -- */
 async function erpPoDialog(id, editing = false) {
   const [po, opts] = await Promise.all([api(`/api/erp/purchase-orders/${id}`), erpOptions()]);
@@ -360,7 +404,7 @@ async function erpNewDialog(kind) {
 }
 
 function wireErp() {
-  $("#erp-tabs").innerHTML = ERP_TABS.map(([k, t]) => `<button type="button" role="tab" data-erp-tab="${k}" aria-selected="${k === ERP.tab}">${t}</button>`).join("");
+  $("#erp-tabs").innerHTML = (previewOnly() ? ERP_TABS.filter(([k]) => k === "preview") : ERP_TABS).map(([k, t]) => `<button type="button" role="tab" data-erp-tab="${k}" aria-selected="${k === ERP.tab}">${t}</button>`).join("");
   $("#erp-tabs").addEventListener("click", ev => { const b = ev.target.closest("[data-erp-tab]"); if (!b) return; ERP.tab = b.dataset.erpTab; ERP.state = ""; ERP.q = ""; loadErp(); });
   $("#erp-filters").addEventListener("change", ev => { const k = ev.target.dataset.f; if (!k || k === "q") return; ERP[k] = ev.target.value; loadErp(); });
   let t;
@@ -377,6 +421,17 @@ function wireErp() {
     if (nw) { erpNewDialog(nw.dataset.erpNew); return; }
     const retry = ev.target.closest("[data-erp-retry]");
     if (retry) { retry.disabled = true; try { const r = await post(`/api/erp/sync/${retry.dataset.erpRetry}/retry`, {}); toast(`Retried: ${r.status}${r.error ? ` (${r.error})` : ""}`); } catch (e) { toast(e.message); } loadErp(); return; }
+    const apply = ev.target.closest("[data-erp-apply]");
+    if (apply) {
+      const backfill = apply.dataset.erpApply === "backfill";
+      if (!confirm(backfill ? "Make the Odoo bills for the invoices listed (draft, or cancelled for rejected ones)? Nothing is posted or paid."
+        : "Send the approved vendors to Odoo as listed (matched, or created; none without a GSTIN)?")) return;
+      apply.disabled = true;
+      try { const r = await post(backfill ? "/api/erp/backfill" : "/api/erp/sync-vendors", { confirm: true });
+        toast(backfill ? `${r.queued} invoice(s) queued for Odoo.` : `${r.queued} vendor(s) queued for Odoo, ${r.flagged_no_gstin} flagged (no GSTIN).`); }
+      catch (e) { toast(e.message); }
+      loadErp(); return;
+    }
     const sync = ev.target.closest("[data-erp-sync]");
     if (sync) { sync.disabled = true; try { await post("/api/erp/sync", { full: sync.dataset.erpSync === "full" }); toast("Synced with Odoo."); } catch (e) { toast(e.message); } loadErp(); }
   });

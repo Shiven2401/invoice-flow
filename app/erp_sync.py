@@ -454,6 +454,70 @@ def _product_create(p, row):
     return dict(odoo_id=pid, existed=bool(found))
 
 
+MASTER = 0   # vendor_odoo.user_id for the shared master list
+
+
+def link_vendor_later(user_id, vendor_id, name, gstin, by, scope=None):
+    """A vendor approved in Invoice Flow goes to Odoo (found by GSTIN, then by cleaned name, or created there), and its
+    Odoo id is kept with it. Without a GSTIN it isn't sent: it's flagged instead. Queued, so Odoo being away loses nothing."""
+    from . import rules
+    if not rules.uses_odoo(user_id):
+        return None
+    scope = user_id if scope is None else scope
+    if not (gstin or "").strip():
+        db.set_vendor_link(scope, vendor_id, None, "skipped", "no GSTIN: flagged, not sent to Odoo")
+        return None
+    return enqueue("vendor_link", dict(scope=scope, vendor_id=vendor_id, name=name, gstin=gstin.strip().upper(), by=by),
+                   f"vendor_link:{scope}:{vendor_id}", user_id)
+
+
+@handler("vendor_link")
+def _vendor_link(p, row):
+    from . import extract, rules
+    found = odoo._call("res.partner", "search_read", domain=[["vat", "=", p["gstin"]]], fields=["id", "supplier_rank"], limit=1)
+    how = "matched by GSTIN"
+    if not found:
+        clean = rules.norm_name(extract.clean_vendor_name(p["name"]))
+        first = (clean.split() or [""])[0]
+        candidates = odoo._call("res.partner", "search_read", domain=[["name", "ilike", first]], fields=["id", "name", "supplier_rank", "vat"], limit=50) if first else []
+        found = [c for c in candidates if rules.norm_name(c["name"]) == clean and not c.get("vat")]   # same name, and no other GSTIN
+        how = "matched by name"
+    if found:
+        pid = found[0]["id"]
+        if not found[0]["supplier_rank"]:
+            odoo._call("res.partner", "write", ids=[pid], vals={"supplier_rank": 1})
+    else:
+        pid = odoo._call("res.partner", "create", vals_list=[dict(name=extract.clean_vendor_name(p["name"]), vat=p["gstin"], supplier_rank=1,
+                                                                    is_company=True)])[0]
+        _note("res.partner", pid, f"<p>Vendor approved in Invoice Flow by <b>{p['by']}</b> ({p['vendor_id']}).</p>")
+        how = "created in Odoo"
+    db.set_vendor_link(p["scope"], p["vendor_id"], pid, "linked", how)
+    _refresh("res.partner", pid)
+    return dict(odoo_id=pid, how=how)
+
+
+@handler("bill_sync")
+def _bill_sync(p, row):
+    """An invoice's bill (held, rejected, or a decision that couldn't reach Odoo at once): created or updated."""
+    from . import bill_sync
+    run = db.get_run(p["run_id"], p["user_id"])
+    if not run or not run["result_json"]:
+        return dict(skipped="run gone or not decided")
+    decision = p.get("decision") or run["final_decision"] or run["decision"]
+    try:
+        out = bill_sync.sync(p["run_id"], p["user_id"], decision, json.loads(run["result_json"]), by_person=p.get("by_person", False),
+                             person_note=p.get("note", ""), acting_user=p.get("acting_user"))
+    except odoo.OdooError as e:
+        db.activity_for_run(p["run_id"], sync_status=f"waiting for Odoo: {str(e)[:120]}" if isinstance(e, odoo.OdooUnreachable) else f"failed: {str(e)[:120]}")
+        raise
+    return dict(bill_id=out["bill_id"], state=out["state"], action=out["action"])
+
+
+def sync_bill_later(run_id, user_id, decision=None, by_person=False, note="", acting_user=None, run_now=True):
+    return enqueue("bill_sync", dict(run_id=run_id, user_id=user_id, decision=decision, by_person=by_person, note=note, acting_user=acting_user),
+                   f"bill_sync:{run_id}:{decision}:{time.time():.3f}", user_id, run_now=run_now)
+
+
 @handler("run_recheck")
 def _run_recheck(p, row):
     """An invoice held because Odoo didn't answer: once Odoo answers again, check it again (never approved without it)."""

@@ -14,6 +14,36 @@ and the purchasing changes people make in the app back to Odoo. Both directions 
 | **Vendors, products** | Created in the app → created in Odoo (a GSTIN, reference or name Odoo already has is never added twice) | New vendors and products, and changes to them |
 | **Users** | Each connected account becomes a contact tagged **Invoice Flow User** | – |
 
+## Decisions are made in Invoice Flow; Odoo gets the record (app/bill_sync.py)
+
+Every manual approval happens in Invoice Flow (approving a vendor; an invoice's Approved / Held / Rejected). After
+each decision the record goes to Odoo by itself, and only ever as **draft** or **cancelled**: Invoice Flow never posts
+or pays.
+
+| Decision | In Odoo |
+|---|---|
+| Approved, with a matched PO | Draft vendor bill, lines linked to the PO lines (the 3-way match flow, unchanged), the PDF attached |
+| Approved, no PO | Draft vendor bill with the invoice's lines, note "No PO, approved vendor, approved by <user>", the PDF |
+| Held | Draft vendor bill, note "ON HOLD: <reason>", the PDF. Never linked to PO lines, so Odoo's billed quantities stay right |
+| Rejected | The bill, cancelled, with the reason and the PDF |
+| Rejected as a resubmission | No new bill: a note on the original invoice's bill |
+
+- **One bill per invoice** (its vendor, by GSTIN or cleaned name, plus its number; table `invoice_bills`), whoever
+  uploads it and however often it's decided: held then approved updates the same bill (cancelled ones go back to draft).
+  A bill a person has posted in Odoo is never changed; the decision is noted on it.
+- **Vendors**: only vendors approved in Invoice Flow go to Odoo, found first by GSTIN, then by cleaned name, else
+  created; the Odoo id is kept with the app's vendor (table `vendor_odoo`; master-list vendors under user 0, so V001-V004
+  are matched to the Odoo vendors they already are, never created twice). A vendor without a GSTIN is flagged, not sent.
+  An unknown or unapproved vendor's invoice gets a bill without a vendor; the note names the vendor as read.
+- **Names** lose labels such as "Restaurant Name:" or "Legal Entity Name:" (in extraction, approval and the preview).
+- **Activity log** (table `activity`, in Invoice Flow only): one row per invoice per login session: user, session,
+  file, invoice, decision, by whom, reason, uploaded, decided, Odoo bill, sync status. Dashboard > Activity log, and
+  `/api/activity.csv`. Sessions carry an id from this version on; earlier uploads have none.
+- **Before connecting an account**: put it in `ODOO_PREVIEW_ACCOUNTS`. The Odoo ERP page then shows only the **Sync
+  preview** (read-only): vendors to match, create or skip, names cleaned, and the bill each decided invoice would get.
+  After connecting (`ODOO_ACCOUNTS`), "Send the vendors to Odoo" and "Make the bills for old invoices" (the backfill)
+  each need an approver and a confirmation (`POST /api/erp/sync-vendors`, `POST /api/erp/backfill` with `{"confirm": true}`).
+
 ## How the sync works (app/erp_sync.py)
 
 - **Mirror.** One table (`erp_records`) holds Odoo's POs (with lines), vendors, products (with stock), receipts (with
@@ -80,6 +110,7 @@ account when it's not set).
 | `ODOO_PROTOCOL` | `xmlrpc` (Odoo's external API: `authenticate`, then `execute_kw`) or `json2` (Odoo 19+'s JSON-2 API, the default). The same calls either way |
 | `ODOO_ACCOUNTS` | the Invoice Flow accounts connected to Odoo, comma-separated (always set it on a public server) |
 | `ODOO_APPROVERS` | the accounts allowed to create, change or approve POs and add vendors or products; empty = every connected account |
+| `ODOO_PREVIEW_ACCOUNTS` | accounts not connected yet that may see the read-only Sync preview (nothing is written for them) |
 
 Live (a Compute Engine VM behind Cloud Run): URL, database, user, protocol, accounts and approvers come from the VM's
 metadata; the API key comes from **Secret Manager** (secret `odoo-api-key`, read at boot with the VM's service account,

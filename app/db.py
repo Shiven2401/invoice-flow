@@ -73,6 +73,18 @@ def init(c):
         status TEXT, attempts INTEGER DEFAULT 0, next_try_at REAL, last_error TEXT, result_json TEXT, user_id INTEGER,
         created_at TEXT, done_at TEXT);
     CREATE TABLE IF NOT EXISTS erp_state(key TEXT PRIMARY KEY, value TEXT);
+    -- an app vendor (master list: user_id 0; approved by an account: its user_id) and its Odoo vendor
+    CREATE TABLE IF NOT EXISTS vendor_odoo(
+        user_id INTEGER, vendor_id TEXT, odoo_id INTEGER, status TEXT, detail TEXT, synced_at TEXT, PRIMARY KEY(user_id, vendor_id));
+    -- one Odoo bill per invoice (vendor + invoice number), whoever processes it and however often its decision changes
+    CREATE TABLE IF NOT EXISTS invoice_bills(
+        invoice_key TEXT PRIMARY KEY, odoo_bill_id INTEGER, state TEXT, decision TEXT, run_id TEXT, attachment_id INTEGER,
+        updated_at TEXT);
+    -- the activity log: one row per invoice per login session that uploaded or decided it
+    CREATE TABLE IF NOT EXISTS activity(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT, session_id TEXT, run_id TEXT, filename TEXT,
+        invoice_number TEXT, vendor TEXT, decision TEXT, decided_by TEXT, reason TEXT, uploaded_at TEXT, decided_at TEXT,
+        odoo_bill_id INTEGER, sync_status TEXT, UNIQUE(session_id, run_id));
     """)
     # databases made by earlier versions
     run_cols = {r[1] for r in c.execute("PRAGMA table_info(runs)")}
@@ -96,6 +108,14 @@ def init(c):
         c.execute("ALTER TABLE runs ADD COLUMN odoo_trail TEXT")
     if "odoo_partner_id" not in {r[1] for r in c.execute("PRAGMA table_info(users)")}:  # the account's contact in Odoo
         c.execute("ALTER TABLE users ADD COLUMN odoo_partner_id INTEGER")
+    for col in ("upload_session", "decided_at", "decided_session"):  # the activity log: which session uploaded and decided it
+        if col not in run_cols:
+            c.execute(f"ALTER TABLE runs ADD COLUMN {col} TEXT")
+    session_cols = {r[1] for r in c.execute("PRAGMA table_info(sessions)")}
+    if "session_id" not in session_cols:   # a readable id per login (the token itself is never stored)
+        c.execute("ALTER TABLE sessions ADD COLUMN session_id TEXT")
+    if "started_at" not in session_cols:
+        c.execute("ALTER TABLE sessions ADD COLUMN started_at TEXT")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(ledger)")}:
         c.execute("ALTER TABLE ledger ADD COLUMN user_id INTEGER")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(vendors)")}:  # the key changes, so the table is rebuilt
@@ -313,18 +333,80 @@ def open_bills(user_id=None):
     return [tuple(r) for r in rows]
 
 
-def add_session(token_hash, user_id, expires_at, now_ts):
+def add_session(token_hash, user_id, expires_at, now_ts, session_id=None):
     with _lock:
         conn().execute("DELETE FROM sessions WHERE expires_at<?", (now_ts,))
-        conn().execute("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)", (token_hash, user_id, expires_at))
+        conn().execute("INSERT INTO sessions(token_hash,user_id,expires_at,session_id,started_at) VALUES(?,?,?,?,?)",
+                       (token_hash, user_id, expires_at, session_id, now()))
         conn().commit()
 
 
 def session_user(token_hash, now_ts):
+    """The signed-in account, with its login session's id (a session from before ids existed gets one from its hash)."""
     with _lock:
-        r = conn().execute("SELECT u.id,u.username FROM sessions s JOIN users u ON u.id=s.user_id "
-                           "WHERE s.token_hash=? AND s.expires_at>=?", (token_hash, now_ts)).fetchone()
+        r = conn().execute("SELECT u.id,u.username,COALESCE(s.session_id,'old-'||substr(s.token_hash,1,10)) AS session_id "
+                           "FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>=?", (token_hash, now_ts)).fetchone()
     return dict(r) if r else None
+
+
+# ------------------------------------------------------- vendors <-> Odoo, bills, activity --
+
+def vendor_links(user_id):
+    """{vendor_id: row} for the master list (user 0) and this account's vendors."""
+    with _lock:
+        rows = conn().execute("SELECT * FROM vendor_odoo WHERE user_id IN (0, ?)", (user_id,)).fetchall()
+    return {r["vendor_id"]: dict(r) for r in rows}
+
+
+def set_vendor_link(user_id, vendor_id, odoo_id, status, detail=""):
+    with _lock:
+        conn().execute("INSERT INTO vendor_odoo(user_id,vendor_id,odoo_id,status,detail,synced_at) VALUES(?,?,?,?,?,?) "
+                       "ON CONFLICT(user_id,vendor_id) DO UPDATE SET odoo_id=excluded.odoo_id, status=excluded.status, detail=excluded.detail, "
+                       "synced_at=excluded.synced_at", (user_id, vendor_id, odoo_id, status, detail, now()))
+        conn().commit()
+
+
+def bill_link(invoice_key):
+    with _lock:
+        r = conn().execute("SELECT * FROM invoice_bills WHERE invoice_key=?", (invoice_key,)).fetchone()
+    return dict(r) if r else None
+
+
+def set_bill_link(invoice_key, odoo_bill_id, state, decision, run_id, attachment_id=None):
+    with _lock:
+        conn().execute("INSERT INTO invoice_bills(invoice_key,odoo_bill_id,state,decision,run_id,attachment_id,updated_at) VALUES(?,?,?,?,?,?,?) "
+                       "ON CONFLICT(invoice_key) DO UPDATE SET odoo_bill_id=excluded.odoo_bill_id, state=excluded.state, decision=excluded.decision, "
+                       "run_id=excluded.run_id, attachment_id=COALESCE(excluded.attachment_id, invoice_bills.attachment_id), updated_at=excluded.updated_at",
+                       (invoice_key, odoo_bill_id, state, decision, run_id, attachment_id, now()))
+        conn().commit()
+
+
+def log_activity(run_id, session_id, user_id, **fields):
+    """Add or update the activity row of this invoice in this login session."""
+    if not session_id:
+        return
+    with _lock:
+        c = conn()
+        if not c.execute("SELECT 1 FROM activity WHERE session_id=? AND run_id=?", (session_id, run_id)).fetchone():
+            u = c.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+            c.execute("INSERT INTO activity(user_id,username,session_id,run_id) VALUES(?,?,?,?)", (user_id, u[0] if u else None, session_id, run_id))
+        if fields:
+            c.execute(f"UPDATE activity SET {', '.join(f'{k}=?' for k in fields)} WHERE session_id=? AND run_id=?", (*fields.values(), session_id, run_id))
+        c.commit()
+
+
+def activity_for_run(run_id, **fields):
+    """Fields every session's row of this invoice shares (its Odoo bill, the sync status)."""
+    with _lock:
+        conn().execute(f"UPDATE activity SET {', '.join(f'{k}=?' for k in fields)} WHERE run_id=?", (*fields.values(), run_id))
+        conn().commit()
+
+
+def activity_rows(user_id, limit=5000):
+    with _lock:
+        rows = conn().execute("SELECT * FROM activity WHERE user_id=? ORDER BY COALESCE(decided_at, uploaded_at) DESC, id DESC LIMIT ?",
+                              (user_id, limit)).fetchall()
+    return [dict(r) for r in rows]
 
 
 def delete_session(token_hash):

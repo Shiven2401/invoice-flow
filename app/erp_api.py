@@ -404,6 +404,148 @@ def sync_retry(op_id: int, user: dict = Depends(approver)):
     return dict(id=row["id"], status=row["status"], error=row["last_error"])
 
 
+# ----------------------------------------------- dry run, vendor sync, backfill --
+# The preview is read-only (Odoo is only read). Sending vendors and backfilling old invoices each need an approver and
+# {"confirm": true}: nothing reaches Odoo by accident.
+
+def previewer(user: dict = Depends(auth.current_user)):
+    preview = {a.strip().lower() for a in os.getenv("ODOO_PREVIEW_ACCOUNTS", "").split(",") if a.strip()}
+    if not odoo.enabled() or not (rules.uses_odoo(user["id"]) or user["username"].lower() in preview):
+        raise HTTPException(404, "This account has no Odoo preview.")
+    return user
+
+
+def _partners():
+    return odoo._call("res.partner", "search_read", domain=["|", ["supplier_rank", ">", 0], ["vat", "!=", False]],
+                      fields=["id", "name", "vat", "supplier_rank"])
+
+
+def build_preview(user_id):
+    """What sending this account's vendors and decided invoices to Odoo would do. Reads Odoo; writes nothing."""
+    from . import bill_sync, extract
+    partners, links = _partners(), db.vendor_links(user_id)
+    master_ids = {v["vendor_id"] for v in rules._app_vendors(None)}
+    vendors, vendor_partner = [], {}
+    for v in rules._app_vendors(user_id):
+        link = links.get(v["vendor_id"]) or {}
+        if link.get("odoo_id"):
+            action, oid, why = "linked already", link["odoo_id"], link.get("detail") or ""
+        else:
+            action, oid, why = bill_sync.vendor_plan(v["name"], v.get("gstin"), v.get("status"), partners)
+        vendor_partner[v["vendor_id"]] = oid if action in ("match", "linked already") else ("new" if action == "create" else None)
+        vendors.append(dict(vendor_id=v["vendor_id"], name=v["name"], clean_name=extract.clean_vendor_name(v["name"]), gstin=v.get("gstin") or "",
+                            status=v.get("status"), list="master list" if v["vendor_id"] in master_ids else "approved in Invoice Flow",
+                            action=action, odoo_id=oid, why=why))
+    names = {}
+    for v in vendors:
+        if v["clean_name"] != v["name"]:
+            names.setdefault(v["name"], dict(before=v["name"], after=v["clean_name"], where=set()))["where"].add("vendor list")
+    key_links = {}
+    with db._lock:
+        for r in db.conn().execute("SELECT * FROM invoice_bills"):
+            key_links[r["invoice_key"]] = dict(r)
+    invoices = []
+    for r in reversed(db.list_runs(user_id, limit=-1)):      # oldest first, as the backfill runs: an original before its resubmission
+        if r["status"] not in ("done", "error"):
+            continue
+        full = db.get_run(r["id"], user_id) or {}
+        res = json.loads(full.get("result_json") or "null") or {}
+        f, vend = res.get("fields") or {}, res.get("vendor") or {}
+        decision = r.get("final_decision") or r.get("decision") or "HOLD"
+        raw = f.get("vendor_name") or r.get("vendor_name") or ""
+        if raw and extract.clean_vendor_name(raw) != raw:
+            names.setdefault(raw, dict(before=raw, after=extract.clean_vendor_name(raw), where=set()))["where"].add("invoices")
+        f2 = dict(f, vendor_name=extract.clean_vendor_name(raw)) if raw else f
+        codes = set(r.get("codes") or [])
+        action, state = bill_sync.preview_bill(f2, vend, decision, codes, key_links)
+        key = bill_sync.invoice_key(f2, vend)
+        if key and not full.get("odoo_bill_id") and not action.startswith("note on the original") and key not in key_links:
+            key_links[key] = dict(odoo_bill_id="(new)", state=state)   # the bills made earlier in this same run
+        partner = vendor_partner.get(vend.get("vendor_id")) if vend else None
+        if vend and str(vend.get("vendor_id", "")).startswith("OD"):
+            partner = int(vend["vendor_id"][2:])
+        invoices.append(dict(run_id=r["id"], file=r["filename"], invoice_number=r.get("invoice_number") or "", vendor=extract.clean_vendor_name(raw) or "unknown",
+                             decision=decision, amount=r.get("total"), date=r.get("invoice_date") or "", reasons=", ".join(sorted(codes)) or "-",
+                             bill_action=action, bill_state={"draft": "draft", "cancel": "cancelled", "posted": "posted (unchanged)", "note": "no new bill"}[state],
+                             bill_vendor=("Odoo vendor #%s" % partner) if isinstance(partner, int) else
+                             "vendor created in Odoo first" if partner == "new" else "no vendor (name in the note)",
+                             has_bill=bool(full.get("odoo_bill_id"))))
+    pending = [i for i in invoices if not i["has_bill"]]
+    count = lambda pred: sum(1 for i in pending if pred(i))
+    return dict(
+        vendors=vendors, cleaned_names=[dict(n, where=sorted(n["where"])) for n in names.values()],
+        vendor_summary=dict(match=sum(1 for v in vendors if v["action"] == "match"), create=sum(1 for v in vendors if v["action"] == "create"),
+                            skip=sum(1 for v in vendors if v["action"] == "skip"), linked=sum(1 for v in vendors if v["action"] == "linked already")),
+        invoices=invoices,
+        bill_summary=dict(draft_approved=count(lambda i: i["decision"] == "APPROVE" and i["bill_state"] == "draft"),
+                          draft_on_hold=count(lambda i: i["decision"] == "HOLD" and i["bill_state"] == "draft"),
+                          cancelled_rejected=count(lambda i: i["bill_state"] == "cancelled"),
+                          duplicate_notes=count(lambda i: i["bill_action"].startswith("note on the original")),
+                          already_billed=len(invoices) - len(pending), total_amount=round(sum(i["amount"] or 0 for i in pending), 2)),
+        connected=rules.uses_odoo(user_id), generated_at=db.now())
+
+
+@router.get("/api/erp/preview")
+def preview(user: dict = Depends(previewer)):
+    try:
+        return build_preview(user["id"])
+    except odoo.OdooError as e:
+        raise HTTPException(502, f"Odoo didn't answer, so the preview can't be made ({e}).")
+
+
+@router.get("/api/erp/preview.csv")
+def preview_csv(user: dict = Depends(previewer)):
+    import csv
+    import io
+    from fastapi.responses import Response
+    p = preview(user)
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["section", "id", "name / file", "vendor", "GSTIN / invoice no.", "decision / list", "amount", "action", "Odoo state / id", "why / reasons"])
+    for v in p["vendors"]:
+        w.writerow(["vendor", v["vendor_id"], v["name"], v["clean_name"], v["gstin"], v["list"], "", v["action"], v["odoo_id"] or "", v["why"]])
+    for n in p["cleaned_names"]:
+        w.writerow(["cleaned name", "", n["before"], n["after"], "", ", ".join(n["where"]), "", "label removed", "", ""])
+    for i in p["invoices"]:
+        w.writerow(["invoice", i["run_id"], i["file"], i["vendor"], i["invoice_number"], i["decision"], i["amount"] if i["amount"] is not None else "",
+                    "already has a bill" if i["has_bill"] else i["bill_action"], i["bill_state"], i["reasons"]])
+    return Response(out.getvalue(), media_type="text/csv", headers={"Content-Disposition": 'attachment; filename="odoo-sync-preview.csv"'})
+
+
+@router.post("/api/erp/sync-vendors")
+def sync_vendors(body: dict = Body(default={}), user: dict = Depends(approver)):
+    """Send the app's approved vendors to Odoo as the preview showed (match by GSTIN, then cleaned name; else create;
+    no GSTIN: flagged). Needs {"confirm": true}."""
+    if body.get("confirm") is not True:
+        raise HTTPException(400, 'Send {"confirm": true} once you have checked the preview.')
+    master_ids = {v["vendor_id"] for v in rules._app_vendors(None)}
+    queued = flagged = skipped = 0
+    for v in rules._app_vendors(user["id"]):
+        if v.get("status") != "approved":
+            skipped += 1
+            continue
+        scope = erp_sync.MASTER if v["vendor_id"] in master_ids else user["id"]
+        op = erp_sync.link_vendor_later(user["id"], v["vendor_id"], v["name"], v.get("gstin"), user["username"], scope=scope)
+        queued, flagged = queued + bool(op), flagged + (not op)
+    return dict(queued=queued, flagged_no_gstin=flagged, skipped_not_approved=skipped, **erp_sync.status())
+
+
+@router.post("/api/erp/backfill")
+def backfill(body: dict = Body(default={}), user: dict = Depends(approver)):
+    """Give every already-decided invoice of this account (without a bill yet) its bill, as the preview listed.
+    Needs {"confirm": true}. Queued, in order, and safe to repeat (one bill per invoice)."""
+    if body.get("confirm") is not True:
+        raise HTTPException(400, 'Send {"confirm": true} once you have checked the backfill list.')
+    queued = 0
+    for r in reversed(db.list_runs(user["id"], limit=-1)):   # oldest first: an original gets its bill before a resubmission is noted on it
+        if r["status"] in ("done", "error") and not r.get("odoo_bill_id"):
+            erp_sync.sync_bill_later(r["id"], user["id"], r.get("final_decision") or r.get("decision") or "HOLD",
+                                     note="backfill of an invoice decided before the Odoo sync", acting_user=user["username"], run_now=False)
+            queued += 1
+    threading.Thread(target=erp_sync.run_due, kwargs=dict(limit=1000), daemon=True).start()
+    return dict(queued=queued)
+
+
 # ------------------------------------------------------------------ webhook --
 
 _hits = []

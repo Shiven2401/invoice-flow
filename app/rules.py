@@ -77,9 +77,29 @@ def load_vendors(user_id):
     """The shared master list, plus the vendors this account has approved. An account connected to Odoo gets Odoo's
     vendors instead (matched by GSTIN, field vat); a vendor tagged Blocked there is blocked here. Raises odoo.OdooError."""
     if uses_odoo(user_id):
+        # Odoo's vendors, plus the app's own approved list (approvals are made in the app and then sent to Odoo): an app
+        # vendor already in Odoo (linked, or the same GSTIN) is the same vendor once, keeping the app's names for it
         learned = db.vendor_aliases(user_id)
-        return [dict(vendor_id=f"OD{v['id']}", name=v["name"], gstin=v["vat"], status="blocked" if v["blocked"] else "approved",
-                     source="Odoo", odoo_id=v["id"], aliases=learned.get(f"OD{v['id']}", [])) for v in odoo.vendors()]
+        out = [dict(vendor_id=f"OD{v['id']}", name=v["name"], gstin=v["vat"], status="blocked" if v["blocked"] else "approved",
+                    source="Odoo", odoo_id=v["id"], aliases=list(learned.get(f"OD{v['id']}", []))) for v in odoo.vendors()]
+        by_odoo, by_gstin = {v["odoo_id"]: v for v in out}, {(v["gstin"] or "").upper(): v for v in out if v["gstin"]}
+        links = db.vendor_links(user_id)
+        for a in _app_vendors(user_id):
+            link = links.get(a["vendor_id"]) or {}
+            same = by_odoo.get(link.get("odoo_id")) or by_gstin.get((a.get("gstin") or "").upper())
+            if same:
+                same.setdefault("app_vendor_ids", []).append(a["vendor_id"])
+                same["aliases"] += [n for n in [a["name"], *a["aliases"]] if n and n not in same["aliases"] and n != same["name"]]
+                if a["status"] == "blocked":
+                    same["status"] = "blocked"                  # blocked in either place is blocked
+            else:
+                out.append(dict(a, odoo_id=None, app_vendor_ids=[a["vendor_id"]], source=a["source"] + " (not in Odoo)"))
+        return out
+    return _app_vendors(user_id)
+
+
+def _app_vendors(user_id):
+    """The master list plus the vendors this account approved in the app, with the names it learned for them."""
     out = []
     with open(config.DATA_DIR / "vendors.csv", newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):

@@ -180,6 +180,7 @@
     <div class="dash-tabs" role="tablist" aria-label="Dashboard views">
       <button type="button" role="tab" id="tab-overview" data-dash-tab="overview" aria-selected="true" aria-controls="dash-overview">Overview</button>
       <button type="button" role="tab" id="tab-analytics" data-dash-tab="analytics" aria-selected="false" aria-controls="dash-analytics">Analytics</button>
+      <button type="button" role="tab" id="tab-activity" data-dash-tab="activity" aria-selected="false" aria-controls="dash-activity">Activity log</button>
     </div>
     <!-- every filter in one place: folder and period scope the whole Dashboard, the rest only the History table -->
     <div class="filter-bar" id="filter-bar" role="group" aria-label="Filters">
@@ -247,6 +248,8 @@
       <div class="fs-foot"><span class="fs-total" id="fs-total"></span><button class="btn primary" type="button" data-sheet-close>Apply</button></div>
     </section>
     <div id="dash-analytics" role="tabpanel" aria-labelledby="tab-analytics" hidden></div>
+    <!-- every invoice per login session: who uploaded it, who decided what and why, and its Odoo bill -->
+    <div id="dash-activity" role="tabpanel" aria-labelledby="tab-activity" hidden></div>
     <div id="dash-overview" role="tabpanel" aria-labelledby="tab-overview">
       <div class="tally" id="tally"></div>
       <div class="dash-grid">

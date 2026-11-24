@@ -1702,4 +1702,10 @@ button.erp-tile:hover, button.erp-tile:focus-visible { border-color: var(--lav);
   .erp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .erp-filters .f input, .erp-filters .f select { min-width: 0; width: 100%; }
   .erp-filters .f { flex: 1 1 140px; }
-}
+}/* the activity log (Dashboard > Activity log) */
+#dash-activity .table-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+#dash-activity .table-head .btn { margin-left: auto; }
+.activity-table td { vertical-align: top; font-size: 13px; }
+.activity-table code { font-size: 12px; }
+.activity-table .activity-reason { min-width: 220px; max-width: 420px; white-space: normal; }
+.activity-table tr.this-session td:first-child { box-shadow: inset 3px 0 0 var(--lav); }

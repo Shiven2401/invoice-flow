@@ -269,6 +269,25 @@ def create_draft_bill(partner_id, invoice_no, invoice_date, lines, move_type="in
     return _call("account.move", "create", vals_list=[vals])[0]
 
 
+def bill_state(bill_id):
+    """draft / posted / cancel, or None if Odoo no longer has the bill."""
+    rows = _call("account.move", "read", ids=[bill_id], fields=["state"])
+    return rows[0]["state"] if rows else None
+
+
+def new_bill(vals):
+    return _call("account.move", "create", vals_list=[vals])[0]
+
+
+def write_bill(bill_id, vals):
+    _call("account.move", "write", ids=[bill_id], vals=vals)
+
+
+def set_bill_state(bill_id, state):
+    """Only the two moves Invoice Flow makes: cancel a draft, or set a cancelled bill back to draft. Never post."""
+    _call("account.move", {"cancel": "button_cancel", "draft": "button_draft"}[state], ids=[bill_id])
+
+
 def bill_url(bill_id):
     return link("bill", bill_id)
 

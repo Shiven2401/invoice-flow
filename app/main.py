@@ -7,6 +7,7 @@ parallel could both see the same 'billed so far' and both pass.
 Every /api route needs a login (see auth.py) and sees only that account's data.
 """
 import json
+import os
 import queue
 from html import escape
 import re
@@ -25,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from . import auth, config, db, erp_api, erp_sync, export, extract, logs, odoo, odoo_trail, pipeline, rules
+from . import auth, bill_sync, config, db, erp_api, erp_sync, export, extract, logs, odoo, odoo_trail, pipeline, rules
 
 logs.setup()
 logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".format(*extract.llm_provider()) if extract.llm_available() else False,
@@ -162,7 +163,7 @@ def _check_capacity(user_id, adding):
         raise HTTPException(429, f"This account has reached its limit of {config.MAX_RUNS_PER_USER} documents.")
 
 
-def _enqueue(src: Path, filename: str, user_id, inputs=None, review=False, batch_id=None, wait=False):
+def _enqueue(src: Path, filename: str, user_id, inputs=None, review=False, batch_id=None, wait=False, session=None):
     """Store an upload and queue it. wait=True stores a folder's later invoice without queuing it: it waits for the
     approval given on the folder's first invoice (see _release_batch)."""
     run_id = uuid.uuid4().hex[:8]
@@ -170,6 +171,9 @@ def _enqueue(src: Path, filename: str, user_id, inputs=None, review=False, batch
     dest = config.UPLOAD_DIR / f"{run_id}{Path(filename).suffix.lower()}"  # never build a disk path from an uploaded name
     shutil.copyfile(src, dest)
     db.create_run(run_id, name, dest, user_id, inputs=inputs, batch_id=batch_id, status="waiting" if wait else "queued")
+    if session:   # the activity log: uploaded in this login session
+        db.update_run(run_id, upload_session=session)
+        db.log_activity(run_id, session, user_id, filename=name, uploaded_at=db.now(), sync_status="processing")
     if wait:
         logger.bind(run=run_id).info("{!r} waits for the approval of its folder's first invoice", name)
         return run_id
@@ -292,7 +296,7 @@ async def upload(files: list[UploadFile] = File(...), inputs: str = Form("{}"), 
             # a person reviews the fields before the checks: every file, or only a batch's first. The rest of a batch
             # wait until that review is submitted, then go through one at a time behind its checks: the worker takes jobs
             # in order, so queuing them now would put the first invoice's checks after all of theirs
-            rid = _enqueue(tmp, name, user["id"], typed, review=not later, batch_id=batch_id, wait=later)
+            rid = _enqueue(tmp, name, user["id"], typed, review=not later, batch_id=batch_id, wait=later, session=user.get("session_id"))
             out.append(dict(id=rid, filename=name, batch=batch_id, waiting=later, review=not later))
     finally:
         for _, tmp in items:
@@ -362,7 +366,7 @@ def run_samples(body: dict = Body(...), user: dict = Depends(auth.current_user))
         if name not in folder_of:
             raise HTTPException(404, f"Unknown sample '{name}'")
     _check_capacity(user["id"], len(names))
-    return dict(runs=[dict(id=_enqueue(config.SAMPLES_DIR / folder_of[name] / name, name, user["id"]), filename=name) for name in names])
+    return dict(runs=[dict(id=_enqueue(config.SAMPLES_DIR / folder_of[name] / name, name, user["id"], session=user.get("session_id")), filename=name) for name in names])
 
 
 @app.get("/api/runs/{run_id}/stream")
@@ -457,8 +461,6 @@ def continue_run(run_id: str, body: dict = Body(...), user: dict = Depends(auth.
     approval, batch_po, all_vendors = body.get("approve_vendor"), body.get("batch_po"), bool(body.get("approve_all_vendors"))
     if approval is not None and not isinstance(approval, dict):
         raise HTTPException(400, "approve_vendor must be an object, such as {\"note\": \"...\"}")
-    if approval is not None or all_vendors:
-        _odoo_guard(user["id"])
     if batch_po not in (None, "accept", "no_po"):
         raise HTTPException(400, "batch_po must be \"accept\" or \"no_po\"")
     if (batch_po or all_vendors) and not row["batch_id"]:
@@ -478,7 +480,8 @@ def continue_run(run_id: str, body: dict = Body(...), user: dict = Depends(auth.
             raise HTTPException(400, problem)
         # a corrected name keeps what the document reads as an alias, so this invoice still matches in the checks
         vendor_id, note = rules.next_vendor_id(vendors), str(approval.get("note") or "").strip()[:500]
-        db.add_vendor(vendor_id, name, read_name if read_name != name else "", gstin, note, run_id, user["id"])
+        db.add_vendor(vendor_id, extract.clean_vendor_name(name), read_name if read_name != name else "", gstin, note, run_id, user["id"])
+        erp_sync.link_vendor_later(user["id"], vendor_id, name, gstin, user["username"])   # approved here, so it goes to Odoo
         if approval.get("no_po"):
             db.set_no_po(vendor_id, note, run_id, user["id"])
     # given here once for the folder: the PO answer for this vendor (and, with "approve all", for every vendor the folder
@@ -511,23 +514,26 @@ def override(run_id: str, body: dict = Body(...), user: dict = Depends(auth.curr
     if decision not in ("APPROVE", "REJECT"):
         raise HTTPException(400, "decision must be APPROVE or REJECT")
     res = json.loads(row["result_json"])
-    bill = None
-    if decision == "APPROVE" and rules.uses_odoo(user["id"]) and not res.get("erp"):
-        # the ERP comes first: a person's approval posts the same draft bill an automatic one would. If Odoo won't take
-        # it, nothing is marked approved, so the invoice stays held with the reason
-        if not res.get("erp_plan"):
-            raise HTTPException(400, "This invoice can't go to Odoo: its vendor isn't a vendor there. Add the vendor in Odoo (with its GSTIN), then check the invoice again.")
+    note = (body.get("note") or "").strip()[:500]
+    erp, bill = rules.uses_odoo(user["id"]), None
+    if decision == "APPROVE" and erp:
+        # approved in the app: the invoice's bill (the same one it got while it was held) becomes the approved draft, linked
+        # to the PO lines when it has a PO. If Odoo won't take it, nothing is marked approved: the invoice stays held
         try:
-            bill = pipeline.post_bill(res.get("fields") or {}, res["erp_plan"])
+            bill = bill_sync.sync(run_id, user["id"], "APPROVE", res, by_person=True, person_note=note, acting_user=user["username"])
         except odoo.OdooError as e:
             raise HTTPException(502, f"Odoo didn't take the draft bill ({e}). The invoice stays on hold; try again.")
         res["erp"] = bill
-    db.update_run(run_id, final_decision=decision, override_note=(body.get("note") or "").strip()[:500],
-                  **({"result_json": json.dumps(res), "odoo_bill_id": bill["bill_id"]} if bill else {}),
+    db.update_run(run_id, final_decision=decision, override_note=note, decided_at=db.now(), decided_session=user.get("session_id"),
+                  **({"result_json": json.dumps(res)} if bill else {}),
                   **({"folder_id": None} if decision == "REJECT" else {}))  # rejected invoices don't stay in folders
+    db.log_activity(run_id, user.get("session_id"), user["id"], filename=row["filename"], invoice_number=row["invoice_number"], vendor=row["vendor_name"],
+                    decision=decision, decided_by=user["username"], reason=note or ("approved after review" if decision == "APPROVE" else "rejected after review"),
+                    decided_at=db.now(), odoo_bill_id=(bill or {}).get("bill_id") or row["odoo_bill_id"],
+                    sync_status=(f"synced: bill {bill['state']}" if bill else "waiting for Odoo") if erp else "not connected to Odoo")
     logger.bind(run=run_id).info("held invoice manually resolved: {}", decision)
-    if rules.uses_odoo(user["id"]):   # the person's decision goes on the record too: the new bill, or the PO
-        odoo_trail.record(run_id, user["id"], res, decision, by_person=True, person_note=(body.get("note") or "").strip()[:500])
+    if erp and decision == "REJECT":   # the invoice's bill is cancelled, with the reason (through the queue: never lost)
+        erp_sync.sync_bill_later(run_id, user["id"], "REJECT", by_person=True, note=note, acting_user=user["username"])
     if decision == "APPROVE" and row["po_number"] and res.get("budget"):
         db.add_ledger(row["po_number"], run_id, res["budget"]["this_net"])
     else:
@@ -538,6 +544,15 @@ def override(run_id: str, body: dict = Body(...), user: dict = Depends(auth.curr
         if learned:
             db.update_run(run_id, vendor_id=vendor_id, result_json=json.dumps(dict(res, learned=learned)))
         folder = pipeline.file_with_vendor(run_id, vendor_id)
+        link = db.vendor_links(user["id"]).get(vendor_id) if erp and vendor_id else None
+        if link and link.get("odoo_id") and not (res.get("vendor") or {}).get("odoo_id"):
+            # the vendor was approved just now and is in Odoo: the bill gets it as its vendor
+            f = res.get("fields") or {}
+            res["vendor"] = dict(vendor_id=vendor_id, name=f.get("vendor_name"), status="approved", odoo_id=link["odoo_id"], gstin=f.get("vendor_gstin"))
+            if res.get("erp_plan"):
+                res["erp_plan"]["partner_id"] = link["odoo_id"]
+            db.update_run(run_id, result_json=json.dumps(dict(res, learned=learned)))
+            erp_sync.sync_bill_later(run_id, user["id"], "APPROVE", by_person=True, note=note, acting_user=user["username"])
     return dict(ok=True, final_decision=decision, folder=folder, learned=learned)
 
 
@@ -566,7 +581,8 @@ def _learn_from_approval(row, res, user_id):
             learned.append(f"'{name}' is now known as another name for {closest['name']}, so its bills match that vendor.")
         elif not (gstin and any(v["gstin"].upper() == gstin for v in vendors)):
             vendor_id, new_vendor = rules.next_vendor_id(vendors), True
-            db.add_vendor(vendor_id, name, "", gstin, "added when a person approved a held invoice", row["id"], user_id)
+            db.add_vendor(vendor_id, extract.clean_vendor_name(name), "", gstin, "added when a person approved a held invoice", row["id"], user_id)
+            erp_sync.link_vendor_later(user_id, vendor_id, name, gstin, db.username(user_id))
             learned.append(f"{name} was added to your approved vendors.")
     if vendor_id:
         ref = f.get("po_reference")
@@ -588,7 +604,6 @@ def approve_vendor(run_id: str, body: dict = Body(...), user: dict = Depends(aut
     row = db.get_run(run_id, user["id"])
     if not row or row["status"] != "done":
         raise HTTPException(404, "run not found or not finished")
-    _odoo_guard(user["id"])
     res = json.loads(row["result_json"] or "{}")
     if row["final_decision"] or row["decision"] != "HOLD" or not any(x["code"] == "VENDOR_UNKNOWN" for x in res.get("findings", [])):
         raise HTTPException(400, "only an open invoice held for an unknown vendor can have its vendor approved here")
@@ -603,7 +618,8 @@ def approve_vendor(run_id: str, body: dict = Body(...), user: dict = Depends(aut
     vendor_id, note = rules.next_vendor_id(vendors), str(body.get("note") or "").strip()[:500]
     # if the name was corrected, keep what the document reads as an alias so this invoice still matches on the re-check
     aliases = read_name if read_name != name else ""
-    db.add_vendor(vendor_id, name, aliases, gstin, note, run_id, user["id"])
+    db.add_vendor(vendor_id, extract.clean_vendor_name(name), aliases, gstin, note, run_id, user["id"])
+    erp_sync.link_vendor_later(user["id"], vendor_id, name, gstin, user["username"])
     if body.get("no_po"):  # a new vendor has no POs on file, so without this its bills would all be held for one
         db.set_no_po(vendor_id, note, run_id, user["id"])
     _requeue(row)
@@ -689,7 +705,6 @@ def remove_vendor(vendor_id: str, user: dict = Depends(auth.current_user)):
 def add_vendor(body: dict = Body(...), user: dict = Depends(auth.current_user)):
     """A person adds a vendor on the PO ledger page, before any of its bills arrive. The same rules as approving one
     from a held invoice: a valid GSTIN if given, and no lookalike of a vendor already on file or blocked."""
-    _odoo_guard(user["id"])
     name = re.sub(r"\s+", " ", str(body.get("name") or "")).strip()[:200]
     gstin = re.sub(r"\s+", "", str(body.get("gstin") or "")).upper()
     aliases = [a for a in (re.sub(r"\s+", " ", x).strip()[:200] for x in re.split(r"[,|\n]", str(body.get("aliases") or ""))) if a and a.lower() != name.lower()][:10]
@@ -699,7 +714,8 @@ def add_vendor(body: dict = Body(...), user: dict = Depends(auth.current_user)):
     if problem:
         raise HTTPException(400, problem)
     vendor_id = rules.next_vendor_id(vendors)
-    db.add_vendor(vendor_id, name, "|".join(aliases), gstin, note, None, user["id"])
+    db.add_vendor(vendor_id, extract.clean_vendor_name(name), "|".join(aliases), gstin, note, None, user["id"])
+    erp_sync.link_vendor_later(user["id"], vendor_id, name, gstin, user["username"])
     if body.get("no_po"):
         db.set_no_po(vendor_id, note, None, user["id"])
     return dict(ok=True, vendor_id=vendor_id)
@@ -1037,7 +1053,37 @@ def cfg(user: dict = Depends(auth.current_user)):
     return dict(rules=config.RULES, as_of=config.as_of(), buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
                                ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
-                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES], erp=_erp_info(user["id"]))
+                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES], erp=_erp_info(user["id"]),
+                erp_preview=_erp_preview(user))
+
+
+def _erp_preview(user):
+    """An account named in ODOO_PREVIEW_ACCOUNTS sees what syncing with Odoo would do, before anything is written."""
+    names = {a.strip().lower() for a in os.getenv("ODOO_PREVIEW_ACCOUNTS", "").split(",") if a.strip()}
+    return bool(odoo.enabled() and not rules.uses_odoo(user["id"]) and user["username"].lower() in names)
+
+
+ACTIVITY_COLS = ["username", "session_id", "filename", "run_id", "invoice_number", "vendor", "decision", "decided_by", "reason",
+                 "uploaded_at", "decided_at", "odoo_bill_id", "sync_status"]
+
+
+@app.get("/api/activity")
+def activity(user: dict = Depends(auth.current_user)):
+    """The activity log: one row per invoice per login session that uploaded or decided it (this account's own)."""
+    return dict(rows=[{k: r[k] for k in ACTIVITY_COLS} for r in db.activity_rows(user["id"])], session_id=user.get("session_id"))
+
+
+@app.get("/api/activity.csv")
+def activity_csv(user: dict = Depends(auth.current_user)):
+    import csv
+    import io
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(ACTIVITY_COLS)
+    for r in db.activity_rows(user["id"]):
+        w.writerow([r[k] if r[k] is not None else "" for k in ACTIVITY_COLS])
+    return Response(out.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="invoice-flow-activity-{config.as_of()}.csv"'})
 
 
 def _erp_info(user_id):

@@ -904,6 +904,27 @@ def apply_inputs(fields, inputs):
 
 # -------------------------------------------------------------- orchestration --
 
+# a vendor name read together with its label ("Restaurant Name: Spice Hub", "Legal Entity Name - Spice Hub Foods LLP",
+# as on Zomato and Swiggy bills): the label goes. Only with a separator after it, so a name like "Vendor Hub" stays
+NAME_LABEL_RE = re.compile(r"^\s*(?:restaurant\s+name|legal\s+entity\s+name|legal\s+name|trade\s+name|registered\s+name|vendor\s+name|"
+                           r"supplier\s+name|seller\s+name|business\s+name|merchant\s+name|company\s+name|shop\s+name|store\s+name|"
+                           r"sold\s+by|seller|supplier|vendor|merchant|name)\s*[:：\-–]\s*", re.I)
+
+
+def clean_vendor_name(name):
+    """The vendor's name without a label in front of it, and without stray spaces."""
+    if not name:
+        return name
+    out = str(name)
+    for _ in range(3):                                        # "Legal Entity Name: Seller: X" -> "X"
+        new = NAME_LABEL_RE.sub("", out, count=1)
+        if new == out:
+            break
+        out = new
+    out = re.sub(r"\s+", " ", out).strip(" ,;:-")
+    return out or str(name).strip()
+
+
 def extract_fields(doc, mode=None):
     """Return (fields, meta). Never raises: falls back to rules and says so."""
     mode = (mode or config.EXTRACTOR).lower()
@@ -933,6 +954,11 @@ def extract_fields(doc, mode=None):
         meta["used"] = "rules"
         if not doc["text"].strip():
             meta["notes"].append("no readable text and no model available - cannot extract")
+    if fields.get("vendor_name"):
+        cleaned = clean_vendor_name(fields["vendor_name"])
+        if cleaned != fields["vendor_name"]:
+            meta["notes"].append(f"vendor name read as '{fields['vendor_name']}', label removed")
+            fields["vendor_name"] = cleaned
     fields["grounding"] = ground(fields, doc["text"]) if doc["text"].strip() else {}
     return fields, meta
 
