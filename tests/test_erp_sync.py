@@ -397,7 +397,7 @@ def test_an_invoice_held_because_odoo_was_down_is_checked_again_when_it_answers(
     Funcs, ODOO_CASES, run, wait = t_odoo.FakeOdoo, t_odoo.ODOO_CASES, t_odoo.run, t_odoo.wait
     f = Funcs()
     f.contacts, f.attachments, f.notes, f.refuse_notes = [], [], [], False
-    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states"):
+    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states", "inbox_contact"):
         monkeypatch.setattr(odoo, name, getattr(f, name))
     monkeypatch.setattr(odoo, "_call", lambda *a, **k: (_ for _ in ()).throw(odoo.OdooUnreachable("down")) if f.down else 0)
     for k, v in dict(ODOO_URL="https://odoo.test", ODOO_DB="test", ODOO_API_KEY="key", ODOO_ACCOUNTS="").items():

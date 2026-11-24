@@ -91,7 +91,7 @@ def note_html(result, decision, user, filename, by_person=False, person_note="",
     e = html.escape
     who = (f"Decision recorded by <b>{e(user)}</b> after reviewing the hold" + (f": “{e(person_note)}”" if person_note else "") + "."
            if by_person else f"Decision recorded by <b>{e(user)}</b> (processed in Invoice Flow; decided by its checks).")
-    facts = [x for x in [f"Vendor: {e(f.get('vendor_name') or '?')}",
+    facts = [x for x in [f"Vendor: {e(f.get('vendor_name') or '?')}" + (f" (GSTIN {e(f['vendor_gstin'])})" if f.get("vendor_gstin") else ""),
                          f"Total: {e(rules.inr(f.get('total')))}" if f.get("total") is not None else "",
                          f"PO: {e((result.get('po') or {}).get('po_number') or f.get('po_number') or 'none')}",
                          f"File: {e(filename)} (attached)"] if x]
@@ -116,7 +116,8 @@ def _target(result, decision, po_odoo_id=None, vendor_odoo_id=None):
     vid = vendor_odoo_id or v.get("odoo_id")
     if vid:
         return "res.partner", vid, f"vendor {v.get('name') or vid}", odoo.link("vendor", vid)
-    return None
+    pid = odoo.inbox_contact()     # Odoo knows neither: the inbox for unknown vendors, so the invoice is still on record there
+    return "res.partner", pid, "the Invoice Flow inbox (vendor not in Odoo)", odoo.link("contact", pid)
 
 
 def record(run_id, user_id, result, decision, by_person=False, person_note="", po_odoo_id=None, vendor_odoo_id=None):

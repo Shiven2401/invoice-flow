@@ -94,6 +94,10 @@ class FakeOdoo:
         self.notes.append(dict(id=800 + len(self.notes), model=model, res_id=res_id, html=html, attachments=list(attachment_ids)))
         return self.notes[-1]["id"]
 
+    def inbox_contact(self):
+        self._up()
+        return 999
+
     def bill_states(self, ids):
         self._up()
         return {b["id"]: (b["state"], b["payment_state"]) for b in self.bills if b["id"] in ids}
@@ -103,7 +107,7 @@ class FakeOdoo:
 def fake(monkeypatch):
     f = FakeOdoo()
     f.contacts, f.attachments, f.notes, f.refuse_notes = [], [], [], False
-    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states"):
+    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states", "inbox_contact"):
         monkeypatch.setattr(odoo, name, getattr(f, name))
     monkeypatch.setattr(odoo_trail, "_last_refresh", {})
     monkeypatch.setattr(odoo_trail, "_tried", {})
@@ -395,3 +399,11 @@ def test_xmlrpc_sends_the_same_calls(monkeypatch):
     assert sent[1][:6] == ("db", 7, "key", "purchase.order", "message_post", [[5]]) and sent[1][6]["body_is_html"] is True
     assert sent[2][3:7] == ("res.partner", "search_read", [], dict(domain=[["vat", "=", "X"]], fields=["id"]))
     assert odoo.info()["protocol"] == "XML-RPC"
+
+def test_an_invoice_from_a_vendor_odoo_doesnt_know_is_still_on_record_there(fake):
+    """Neither the vendor nor a PO is in Odoo (a Zomato bill, say): the PDF and the note go to the inbox contact."""
+    r = run(client("asha"), "11_unapproved_vendor.pdf")
+    assert r["decision"] == "HOLD" and "VENDOR_UNKNOWN" in codes(r)
+    n = fake.notes[-1]
+    assert (n["model"], n["res_id"]) == ("res.partner", 999) and n["attachments"] and "put on hold" in n["html"]
+    assert r["odoo_trail"][-1]["target"]["label"] == "the Invoice Flow inbox (vendor not in Odoo)"

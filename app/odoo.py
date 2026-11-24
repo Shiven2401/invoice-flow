@@ -306,6 +306,24 @@ def upsert_contact(ref, name, details_html, email=None):
     return _call("res.partner", "create", vals_list=[vals])[0]
 
 
+INBOX_REF = "invoice-flow:unknown-vendors"
+_inbox = {}
+
+
+def inbox_contact():
+    """The one contact where invoices from vendors Odoo doesn't know leave their record (PDF and note), so every
+    processed invoice is traceable in Odoo. Not a vendor (no supplier rank): it's never matched or billed."""
+    if "id" not in _inbox:
+        rows = _call("res.partner", "search_read", domain=[["ref", "=", INBOX_REF]], fields=["id"], limit=1)
+        _inbox["id"] = rows[0]["id"] if rows else _call("res.partner", "create", vals_list=[{
+            "name": "Invoice Flow: invoices from vendors not in Odoo", "ref": INBOX_REF, "is_company": True,
+            "category_id": [[4, tag_id("Invoice Flow")]],
+            "comment": "<p>Invoices processed in Invoice Flow whose vendor (and PO) Odoo doesn't have. Each one is in the chatter "
+                       "with its PDF, the vendor name and GSTIN as read, and why it was held. Add the vendor in Odoo (or on "
+                       "Invoice Flow's Odoo ERP page), then check the invoice again.</p>"}])[0]
+    return _inbox["id"]
+
+
 # ------------------------------------------------- phases 2 and 3: the audit trail --
 
 def attach(model, res_id, filename, data):
