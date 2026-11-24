@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from . import auth, config, db, export, extract, logs, odoo, odoo_trail, pipeline, rules
+from . import auth, config, db, erp_api, erp_sync, export, extract, logs, odoo, odoo_trail, pipeline, rules
 
 logs.setup()
 logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".format(*extract.llm_provider()) if extract.llm_available() else False,
@@ -42,6 +42,7 @@ for _run_id, _path in db.purge_hidden():
 
 app = FastAPI(title="Invoice Flow", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(auth.router)
+app.include_router(erp_api.router)   # the Odoo ERP API (two-way sync), documented in app/erp_api.py
 BUS = {}                     # run_id -> {events, done, t0}
 JOBS = queue.Queue()
 ALLOWED = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
@@ -144,6 +145,7 @@ def _worker():
 threading.Thread(target=_worker, daemon=True).start()
 if odoo.enabled():   # phase 4: bills posted or paid in Odoo show here even with nobody on the Dashboard
     threading.Thread(target=odoo_trail.poll_forever, daemon=True).start()
+    threading.Thread(target=erp_sync.loop, daemon=True).start()   # the two-way sync: queue, pulls, reconcile
 
 
 def _resume_stuck_batches():
@@ -204,8 +206,8 @@ def _release_batch(batch_id, user_id, inputs):
     return [dict(id=r["id"], filename=r["filename"]) for r in rows]
 
 
-ODOO_OWNS_VENDORS = ("This account's vendors and purchase orders come from Odoo. Add it there (a vendor with its GSTIN), "
-                     "then check the invoice again.")
+ODOO_OWNS_VENDORS = ("This account's vendors and purchase orders come from Odoo. Add it on the Odoo ERP page (it's created in "
+                     "Odoo) or in Odoo itself, then check the invoice again.")
 
 
 def _odoo_guard(user_id):
@@ -220,6 +222,21 @@ def _requeue(row):
     BUS[run_id] = dict(events=[], done=False, t0=time.time())
     JOBS.put((run_id, Path(row["file_path"]), row["filename"], json.loads(row["inputs_json"] or "{}"), "full"))
     logger.bind(run=run_id).info("queued {!r} for a re-check", row["filename"])
+
+
+def _auto_recheck(run_id, user_id):
+    """The sync queue's re-check of an invoice held because Odoo didn't answer (or didn't take its bill)."""
+    row = db.get_run(run_id, user_id)
+    if not row or row["status"] != "done" or row["decision"] != "HOLD" or row["final_decision"]:
+        return "no longer needed"
+    codes = {x["code"] for x in (json.loads(row["result_json"] or "{}") or {}).get("findings", []) if x["severity"] in ("hold", "reject")}
+    if not codes & {"ERP_UNREACHABLE", "ERP_POST_FAILED"}:
+        return "no longer needed"
+    _requeue(row)
+    return "checked again"
+
+
+erp_sync.RECHECK[0] = _auto_recheck
 
 
 @app.post("/api/runs")

@@ -17,7 +17,7 @@ from pathlib import Path
 import pymupdf
 from loguru import logger
 
-from . import config, db, extract, odoo, odoo_trail, rules
+from . import config, db, erp_sync, extract, odoo, odoo_trail, rules
 from .rules import inr
 
 STAGES = [
@@ -41,7 +41,7 @@ def _status(fs):
 
 
 def _public_fields(f):
-    keys = ["doc_type", "vendor_name", "vendor_gstin", "buyer_name", "invoice_number", "invoice_date", "po_reference",
+    keys = ["doc_type", "vendor_name", "vendor_gstin", "buyer_name", "invoice_number", "invoice_date", "due_date", "po_reference",
             "currency", "discount", "subtotal", "tax_amount", "tax_rate", "tax_included", "total"]
     return {k: f.get(k) for k in keys}
 
@@ -207,8 +207,9 @@ def bill_plan(v, f, d, pairs, unpaired):
 
 def post_bill(f, plan):
     """Create the draft bill. Returns {bill_id, url}; raises odoo.OdooError."""
-    bill_id = odoo.create_draft_bill(plan["partner_id"], f.get("invoice_number"), f.get("invoice_date"), plan["lines"])
-    return dict(bill_id=bill_id, url=odoo.bill_url(bill_id), lines=len(plan["lines"]),
+    bill_id = odoo.create_draft_bill(plan["partner_id"], f.get("invoice_number"), f.get("invoice_date"), plan["lines"],
+                                     move_type=plan.get("move_type", "in_invoice"), due_date=plan.get("due_date"))
+    return dict(bill_id=bill_id, url=odoo.bill_url(bill_id), lines=len(plan["lines"]), move_type=plan.get("move_type", "in_invoice"),
                 linked=sum(1 for ln in plan["lines"] if ln.get("po_line")), system="Odoo")
 
 
@@ -343,7 +344,14 @@ def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
         else:
             skip("budget", "no PO matched - nothing to reconcile against")
 
-        plan = bill_plan(v, f, d, pairs, unpaired) if erp else None
+        if f.get("doc_type") == "credit_note":   # a vendor credit note: its own lines, as a draft credit note once a person approves
+            plan = bill_plan(v, f, d, None, []) if erp else None
+            if plan:
+                plan["move_type"] = "in_refund"
+        else:
+            plan = bill_plan(v, f, d, pairs, unpaired) if erp else None
+        if plan and f.get("due_date"):
+            plan["due_date"] = f["due_date"]
         return _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres, checks, [], filename, erp=erp, plan=plan)
     except Exception as e:
         return _failed(run_id, t0, emit, findings, filename, e)
@@ -421,7 +429,15 @@ def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres,
         if vendor and vendor.get("odoo_id"):
             result["vendor"]["odoo_id"] = vendor["odoo_id"]
         # 11. the audit trail: the PDF and a note on the bill, or for a held or rejected invoice a note on its PO
-        entry =odoo_trail.record(run_id, db.run_owner(run_id), result, decision)
+        owner = db.run_owner(run_id)
+        entry = odoo_trail.record(run_id, owner, result, decision)
+        # nothing is lost while Odoo is away: a hold for "Odoo didn't answer" is checked again by the sync queue once it
+        # answers (never approved without it), and a note Odoo didn't take is retried
+        codes = {x["code"] for x in findings if x["severity"] in ("hold", "reject")}
+        if codes & {"ERP_UNREACHABLE", "ERP_POST_FAILED"}:
+            erp_sync.enqueue("run_recheck", dict(run_id=run_id, user_id=owner), f"recheck:{run_id}:{time.time():.0f}", owner, run_now=False)
+        elif entry.get("error") and "didn't take the note" in entry["error"]:
+            erp_sync.enqueue("trail_retry", dict(run_id=run_id, user_id=owner, decision=decision), f"trail:{run_id}:{entry['at']}", owner, run_now=False)
         noted = f"; the PDF and a note are on {entry['target']['label']}" if entry.get("target") else f"; {entry.get('error', '')}"
         if bill:
             emit("erp", "ok", TITLES["erp"], f"Draft bill #{bill['bill_id']} created in Odoo, {bill['linked']} of {bill['lines']} line(s) linked to the PO" + noted,

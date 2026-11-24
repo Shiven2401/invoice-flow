@@ -55,7 +55,7 @@ class FakeOdoo:
         self._up()
         return any(b["partner_id"] == partner_id and b["ref"] == invoice_no for b in self.bills)
 
-    def create_draft_bill(self, partner_id, invoice_no, invoice_date, lines):
+    def create_draft_bill(self, partner_id, invoice_no, invoice_date, lines, move_type="in_invoice", due_date=None):
         self._up()
         if self.refuse:
             raise odoo.OdooError("Odoo rejected account.move.create (HTTP 422): the accounting period is locked")

@@ -778,7 +778,7 @@ Rules:
   amount 1200. Short dates such as 23.9.26 or 1.10.26 are day.month.year (2026-09-23, 2026-10-01).
 Schema:
 {"doc_type":str,"vendor_name":str|null,"vendor_gstin":str|null,"buyer_name":str|null,"invoice_number":str|null,"invoice_date":str|null,
-"po_reference":str|null,"currency":str,"subtotal":num|null,"tax_amount":num|null,"tax_rate_percent":num|null,"tax_included_in_amounts":bool,
+"due_date":str|null,"po_reference":str|null,"currency":str,"subtotal":num|null,"tax_amount":num|null,"tax_rate_percent":num|null,"tax_included_in_amounts":bool,
 "total":num|null,"line_items":[{"description":str,"quantity":num|null,"unit_price":num|null,"amount":num|null}],
 "confidence":{"<field>":"high|medium|low"},"notes":str|null}"""
 
@@ -829,7 +829,7 @@ def llm_extract(doc):
     f = dict(doc_type=(j.get("doc_type") or "other").lower(), vendor_name=j.get("vendor_name"),
              vendor_gstin=(j.get("vendor_gstin") or None), buyer_name=j.get("buyer_name"),
              invoice_number=(str(j["invoice_number"]).strip() if j.get("invoice_number") else None),
-             invoice_date=parse_date(j.get("invoice_date")), po_reference=(j.get("po_reference") or None),
+             invoice_date=parse_date(j.get("invoice_date")), due_date=parse_date(j.get("due_date")), po_reference=(j.get("po_reference") or None),
              currency=j.get("currency") or "INR", subtotal=to_num(j.get("subtotal")),
              tax_amount=to_num(j.get("tax_amount")), tax_rate=to_num(j.get("tax_rate_percent")),
              tax_included=bool(j.get("tax_included_in_amounts")), total=to_num(j.get("total")),

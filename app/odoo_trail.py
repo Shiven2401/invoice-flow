@@ -54,6 +54,8 @@ def sync_user(user_id):
         return pid
     except odoo.OdooError as e:
         logger.warning("couldn't add account {} to Odoo's contacts: {}", user_id, e)
+        from . import erp_sync   # queued, so it's retried until Odoo takes it and shows in the sync log meanwhile
+        erp_sync.enqueue("contact_sync", dict(user_id=user_id), f"contact:{user_id}", user_id, run_now=False)
         return None
     finally:
         with _lock:

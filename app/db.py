@@ -60,6 +60,19 @@ def init(c):
     CREATE TABLE IF NOT EXISTS purchase_orders(
         user_id INTEGER, po_number TEXT, vendor_id TEXT, po_date TEXT, description TEXT, net_amount REAL, gst_rate REAL,
         status TEXT, created_at TEXT, PRIMARY KEY(user_id, po_number));
+    -- Odoo, mirrored (erp_sync.py): one row per Odoo record of the models it syncs (POs with their lines, vendors,
+    -- products, receipts with their moves, vendor bills). id is the app's own id for the record; odoo_id is NULL while a
+    -- record made in the app waits in the queue to reach Odoo
+    CREATE TABLE IF NOT EXISTS erp_records(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT NOT NULL, odoo_id INTEGER, ref TEXT, data_json TEXT,
+        odoo_write_date TEXT, synced_at TEXT, last_ok_at TEXT, sync_status TEXT, last_error TEXT, source TEXT,
+        created_by INTEGER, created_at TEXT, UNIQUE(model, odoo_id));
+    -- every write into Odoo, in order: kept after it's done (the audit trail of what the app changed in Odoo, and who)
+    CREATE TABLE IF NOT EXISTS erp_outbox(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, op TEXT NOT NULL, record_id INTEGER, payload_json TEXT, idem_key TEXT UNIQUE,
+        status TEXT, attempts INTEGER DEFAULT 0, next_try_at REAL, last_error TEXT, result_json TEXT, user_id INTEGER,
+        created_at TEXT, done_at TEXT);
+    CREATE TABLE IF NOT EXISTS erp_state(key TEXT PRIMARY KEY, value TEXT);
     """)
     # databases made by earlier versions
     run_cols = {r[1] for r in c.execute("PRAGMA table_info(runs)")}
@@ -95,6 +108,7 @@ def init(c):
             SELECT vendor_id,name,aliases,gstin,status,approved_at,note,run_id FROM vendors_old;
         DROP TABLE vendors_old;
         """)
+    c.execute("CREATE INDEX IF NOT EXISTS erp_outbox_due ON erp_outbox(status, next_try_at)")
     c.execute("CREATE INDEX IF NOT EXISTS runs_user ON runs(user_id)")
     c.execute("CREATE INDEX IF NOT EXISTS ledger_user ON ledger(user_id, po_number)")
     c.commit()
@@ -148,6 +162,146 @@ def set_odoo_partner(user_id, partner_id):
     with _lock:
         conn().execute("UPDATE users SET odoo_partner_id=? WHERE id=?", (partner_id, user_id))
         conn().commit()
+
+
+# ------------------------------------------------------------- Odoo mirror --
+
+def erp_get(model=None, odoo_id=None, record_id=None):
+    with _lock:
+        if record_id is not None:
+            r = conn().execute("SELECT * FROM erp_records WHERE id=?", (record_id,)).fetchone()
+        else:
+            r = conn().execute("SELECT * FROM erp_records WHERE model=? AND odoo_id=?", (model, odoo_id)).fetchone()
+    return dict(r) if r else None
+
+
+def erp_list(model, include_deleted=False):
+    with _lock:
+        rows = conn().execute("SELECT * FROM erp_records WHERE model=?" + ("" if include_deleted else " AND COALESCE(sync_status,'')<>'deleted'")
+                              + " ORDER BY COALESCE(odoo_id, 0) DESC, id DESC", (model,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def erp_upsert(model, odoo_id, ref, data_json, write_date, source="odoo", record_id=None, created_by=None):
+    """Store what Odoo says about a record. Returns (row id, changed). An unchanged write_date only refreshes synced_at."""
+    t = now()
+    with _lock:
+        c = conn()
+        row = None
+        if record_id is not None:
+            row = c.execute("SELECT id, odoo_write_date FROM erp_records WHERE id=?", (record_id,)).fetchone()
+            if row is not None and odoo_id is not None:   # a pull stored it before the app's record got its Odoo id: one row, the app's
+                c.execute("DELETE FROM erp_records WHERE model=? AND odoo_id=? AND id<>?", (model, odoo_id, record_id))
+        if row is None and odoo_id is not None:
+            row = c.execute("SELECT id, odoo_write_date FROM erp_records WHERE model=? AND odoo_id=?", (model, odoo_id)).fetchone()
+        if row is None:
+            rid = c.execute("INSERT INTO erp_records(model,odoo_id,ref,data_json,odoo_write_date,synced_at,last_ok_at,sync_status,source,created_by,created_at) "
+                            "VALUES(?,?,?,?,?,?,?,?,?,?,?)", (model, odoo_id, ref, data_json, write_date, t, t, "synced", source, created_by, t)).lastrowid
+            c.commit()
+            return rid, True
+        changed = row["odoo_write_date"] != write_date
+        if changed:
+            c.execute("UPDATE erp_records SET odoo_id=?, ref=?, data_json=?, odoo_write_date=?, synced_at=?, last_ok_at=?, sync_status='synced', "
+                      "last_error=NULL, source=? WHERE id=?", (odoo_id, ref, data_json, write_date, t, t, source, row["id"]))
+        else:
+            c.execute("UPDATE erp_records SET synced_at=?, last_ok_at=?, sync_status=CASE WHEN sync_status IN ('error','deleted') "
+                      "THEN 'synced' ELSE sync_status END WHERE id=?", (t, t, row["id"]))
+        c.commit()
+        return row["id"], changed
+
+
+def erp_new_local(model, data_json, ref, created_by):
+    """A record made in the app that Odoo doesn't have yet (it waits in the queue)."""
+    with _lock:
+        rid = conn().execute("INSERT INTO erp_records(model,odoo_id,ref,data_json,sync_status,source,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                             (model, None, ref, data_json, "pending", "app", created_by, now())).lastrowid
+        conn().commit()
+    return rid
+
+
+def erp_mark(record_id, status, error=None):
+    with _lock:
+        conn().execute("UPDATE erp_records SET sync_status=?, last_error=? WHERE id=?", (status, error, record_id))
+        conn().commit()
+
+
+def erp_mark_missing(model, keep_ids):
+    """Records Odoo no longer has (deleted there) are kept, marked deleted. Returns how many."""
+    keep = set(keep_ids)
+    with _lock:
+        rows = conn().execute("SELECT id, odoo_id FROM erp_records WHERE model=? AND odoo_id IS NOT NULL AND COALESCE(sync_status,'')<>'deleted'",
+                              (model,)).fetchall()
+        gone = [r["id"] for r in rows if r["odoo_id"] not in keep]
+        for rid in gone:
+            conn().execute("UPDATE erp_records SET sync_status='deleted', synced_at=? WHERE id=?", (now(), rid))
+        conn().commit()
+    return len(gone)
+
+
+def erp_state(key, value=None):
+    with _lock:
+        if value is None:
+            r = conn().execute("SELECT value FROM erp_state WHERE key=?", (key,)).fetchone()
+            return r[0] if r else None
+        conn().execute("INSERT INTO erp_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
+        conn().commit()
+
+
+def outbox_add(op, payload_json, idem_key, user_id, record_id=None):
+    """Queue a write into Odoo. The same idem_key twice returns the first entry: a double click queues one write."""
+    with _lock:
+        c = conn()
+        r = c.execute("SELECT id FROM erp_outbox WHERE idem_key=?", (idem_key,)).fetchone()
+        if r:
+            return r[0]
+        oid = c.execute("INSERT INTO erp_outbox(op,record_id,payload_json,idem_key,status,attempts,next_try_at,user_id,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (op, record_id, payload_json, idem_key, "pending", 0, 0, user_id, now())).lastrowid
+        c.commit()
+    return oid
+
+
+def outbox_claim(op_id=None, now_ts=0.0):
+    """Take the next due entry (or this one) for processing, so two workers never run the same write. Returns it or None."""
+    with _lock:
+        c = conn()
+        if op_id is not None:
+            r = c.execute("SELECT * FROM erp_outbox WHERE id=? AND status='pending'", (op_id,)).fetchone()
+        else:
+            r = c.execute("SELECT * FROM erp_outbox WHERE status='pending' AND next_try_at<=? ORDER BY id LIMIT 1", (now_ts,)).fetchone()
+        if not r:
+            return None
+        c.execute("UPDATE erp_outbox SET status='running' WHERE id=?", (r["id"],))
+        c.commit()
+    return dict(r)
+
+
+def outbox_finish(op_id, status, error=None, result_json=None, next_try_at=None, attempts=None):
+    with _lock:
+        conn().execute("UPDATE erp_outbox SET status=?, last_error=?, result_json=COALESCE(?, result_json), next_try_at=COALESCE(?, next_try_at), "
+                       "attempts=COALESCE(?, attempts), done_at=CASE WHEN ? IN ('done','conflict') THEN ? ELSE done_at END WHERE id=?",
+                       (status, error, result_json, next_try_at, attempts, status, now(), op_id))
+        conn().commit()
+
+
+def outbox_list(limit=200, status=None):
+    with _lock:
+        rows = conn().execute("SELECT * FROM erp_outbox" + (" WHERE status=?" if status else "") + " ORDER BY id DESC LIMIT ?",
+                              ((status, limit) if status else (limit,))).fetchall()
+    return [dict(r) for r in rows]
+
+
+def outbox_get(op_id):
+    with _lock:
+        r = conn().execute("SELECT * FROM erp_outbox WHERE id=?", (op_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def outbox_reset_running():
+    """After a restart, writes that were mid-flight go back in the queue (each handler looks before it creates)."""
+    with _lock:
+        n = conn().execute("UPDATE erp_outbox SET status='pending' WHERE status='running'").rowcount
+        conn().commit()
+    return n
 
 
 def open_bills(user_id=None):

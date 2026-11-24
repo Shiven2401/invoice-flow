@@ -1666,4 +1666,40 @@ body.signed-out { background: var(--paper); }
 .odoo-trail { margin: 6px 0 0; padding-left: 18px; }
 .odoo-trail li { margin: 4px 0; }
 .odoo-noted { margin: 8px 0 0; font-size: 13px; }
-@media (max-width: 600px) { .erp-strip { padding: 12px; } .erp-strip-links a { padding: 6px 10px; } }
+@media (max-width: 600px) { .erp-strip { padding: 12px; } .erp-strip-links a { padding: 6px 10px; } }/* the Odoo ERP page (static/erp.js): figure tiles, sortable tables, the PO form */
+.erp-head-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.erp-tabs { flex-wrap: wrap; }
+.erp-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 0 0 18px; padding: 16px 18px; border-radius: 20px; background: var(--paper-2); }
+.erp-filters input, .erp-filters select { height: 40px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--field); color: var(--ink); font: inherit; }
+.erp-filters[hidden] { display: none; }
+.erp-filters .f { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+.erp-filters .f input, .erp-filters .f select { min-width: 150px; }
+.erp-filters .f-search { flex: 1 1 220px; min-width: 0; }
+.erp-group { margin: 0 0 22px; }
+.erp-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin: 10px 0 18px; }
+.erp-tile { display: grid; gap: 4px; align-content: start; padding: 14px 16px; border-radius: 16px; background: var(--paper-2); border: 1px solid var(--rule);
+  text-align: left; font: inherit; color: var(--ink); }
+.erp-tile .v { font-size: 22px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.erp-tile .l { font-size: 13.5px; font-weight: 600; }
+.erp-tile .s { font-size: 12.5px; color: var(--ink-2); }
+button.erp-tile { cursor: pointer; }
+button.erp-tile:hover, button.erp-tile:focus-visible { border-color: var(--lav); background: var(--lav-wash); }
+.erp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 14px; }
+.erp-table th { padding: 0; }
+.th-sort { display: block; width: 100%; padding: 10px 12px; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-align: inherit; cursor: pointer; white-space: nowrap; }
+.erp-table td { vertical-align: top; }
+.erp-modal { width: min(860px, calc(100vw - 32px)); }
+.erp-po .erp-lines input { width: 96px; text-align: right; }
+.erp-po .erp-lines td, .erp-po .erp-lines th { padding: 7px 10px; white-space: nowrap; }
+.erp-po .erp-lines td:first-child { white-space: normal; min-width: 160px; }
+.erp-line { display: grid; grid-template-columns: minmax(180px, 2fr) minmax(80px, .7fr) minmax(90px, .8fr) minmax(120px, 1fr) auto; gap: 8px; align-items: end; margin: 6px 0; }
+.erp-line .icon-btn { margin-bottom: 4px; }
+.erp-related p { margin: 4px 0; font-size: 13.5px; }
+.wz-check.small span { font-size: 12.5px; }
+@media (max-width: 700px) {
+  .erp-line { grid-template-columns: 1fr 1fr; }
+  .erp-line label:first-child { grid-column: 1 / -1; }
+  .erp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .erp-filters .f input, .erp-filters .f select { min-width: 0; width: 100%; }
+  .erp-filters .f { flex: 1 1 140px; }
+}

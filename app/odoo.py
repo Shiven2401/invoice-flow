@@ -21,8 +21,11 @@ Optional:
                    server set it, so other people's invoices never reach your Odoo and the built-in demo keeps working.
 """
 import base64
+import hashlib
+import hmac
 import os
 import threading
+import time
 import xmlrpc.client
 
 import requests
@@ -78,9 +81,29 @@ def info():
                 home=f"{url}/odoo", bills=link("bill"), pos=link("po"), vendors=link("vendor"))
 
 
+READS = {"search_read", "read", "search", "search_count", "fields_get", "name_search"}
+RETRY_WAITS = (1, 3)   # seconds between retries of a read that didn't get through; writes are never retried here (see erp_sync)
+
+
 def _call(model, method, **params):
-    """The one door into Odoo: a model (table), a method (search_read, read, create, ...) and its arguments by name."""
-    return _xmlrpc(model, method, params) if protocol() == "xmlrpc" else _json2(model, method, params)
+    """The one door into Odoo: a model (table), a method (search_read, read, create, ...) and its arguments by name.
+    A read that hits a network blip is tried again with growing waits; a write is not, because a write that timed out
+    may still have happened. Writes go through erp_sync's queue, whose handlers look before they create."""
+    send = _xmlrpc if protocol() == "xmlrpc" else _json2
+    for wait in (*RETRY_WAITS, None) if method in READS else (None,):
+        try:
+            return send(model, method, params)
+        except OdooUnreachable:
+            if wait is None:
+                raise
+            time.sleep(wait)
+
+
+def webhook_token():
+    """The secret in the webhook URL Odoo calls. Derived from the API key, so it needs no setting of its own and changes
+    when the key is rotated."""
+    _, db, key = _cfg()
+    return hmac.new(key.encode(), f"invoice-flow-webhook:{db}".encode(), hashlib.sha256).hexdigest()[:40] if key else ""
 
 
 _uid = {}                    # (url, db, login) -> the user id XML-RPC's authenticate gave
@@ -96,6 +119,15 @@ class _Transport(xmlrpc.client.SafeTransport):
         return conn
 
 
+class _PlainTransport(xmlrpc.client.Transport):
+    """The same over plain http (an Odoo on localhost, or behind a local proxy)."""
+
+    def make_connection(self, host):
+        conn = super().make_connection(host)
+        conn.timeout = TIMEOUT
+        return conn
+
+
 def _xmlrpc(model, method, params):
     """execute_kw takes positional args and keyword args: the record ids (if any) go first, everything else by name, so
     each call reads the same as its JSON-2 twin."""
@@ -103,7 +135,8 @@ def _xmlrpc(model, method, params):
     login = os.getenv("ODOO_USER", "").strip()
     if not login:
         raise OdooError("ODOO_PROTOCOL=xmlrpc needs ODOO_USER, the login the API key belongs to")
-    proxy = lambda path: xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/{path}", transport=_Transport(), allow_none=True)
+    proxy = lambda path: xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/{path}", allow_none=True,
+                                                   transport=_Transport() if url.startswith("https") else _PlainTransport())
     try:
         with _uid_lock:
             uid = _uid.get((url, db, login))
@@ -195,11 +228,24 @@ def bill_exists(partner_id, invoice_no):
     return _call("account.move", "search_count", domain=domain) > 0
 
 
-def create_draft_bill(partner_id, invoice_no, invoice_date, lines):
+def find_bill(partner_id, invoice_no, move_type="in_invoice"):
+    """The live (not cancelled) bill or credit note with this vendor reference, or None."""
+    rows = _call("account.move", "search_read", domain=[["move_type", "=", move_type], ["partner_id", "=", partner_id], ["ref", "=", invoice_no],
+                                                        ["state", "!=", "cancel"]], fields=["id", "state"], limit=1)
+    return rows[0] if rows else None
+
+
+def create_draft_bill(partner_id, invoice_no, invoice_date, lines, move_type="in_invoice", due_date=None):
     """lines: list of {"po_line": <row from po_lines>, "quantity": x, "price_unit": y}, or {"name": ..., "quantity": x,
-    "price_unit": y} for a vendor that bills without a PO. invoice_date must be "YYYY-MM-DD". The bill stays in draft:
-    a person posts it. Linking each line to its PO line (purchase_line_id) makes Odoo update qty_invoiced itself, so a
-    second bill for the same goods is caught by Odoo too."""
+    "price_unit": y} for a vendor that bills without a PO; either may carry "discount" (%). invoice_date must be
+    "YYYY-MM-DD". move_type in_refund makes a vendor credit note. The bill stays in draft: a person posts it. Linking
+    each line to its PO line (purchase_line_id) makes Odoo update qty_invoiced itself, so a second bill for the same
+    goods is caught by Odoo too. Idempotent: if this vendor already has a live bill with this number, that one is
+    returned instead of a second being made (an upload processed twice, or a retry after a timeout)."""
+    if invoice_no:
+        found = find_bill(partner_id, invoice_no, move_type)
+        if found:
+            return found["id"]
     bill_lines = []
     for ln in lines:
         if ln.get("po_line"):
@@ -210,10 +256,14 @@ def create_draft_bill(partner_id, invoice_no, invoice_date, lines):
                 vals["tax_ids"] = [[6, 0, pl["tax_ids"]]]           # the PO line's taxes, not the product's defaults
         else:
             vals = {"name": ln["name"], "quantity": ln["quantity"], "price_unit": ln["price_unit"]}
+        if ln.get("discount"):
+            vals["discount"] = ln["discount"]
         bill_lines.append([0, 0, vals])                              # [0, 0, {...}]: "create this child row"
-    vals = {"move_type": "in_invoice", "partner_id": partner_id, "ref": invoice_no, "invoice_line_ids": bill_lines}
+    vals = {"move_type": move_type, "partner_id": partner_id, "ref": invoice_no, "invoice_line_ids": bill_lines}
     if invoice_date:
         vals["invoice_date"] = invoice_date
+    if due_date:
+        vals["invoice_date_due"] = due_date
     return _call("account.move", "create", vals_list=[vals])[0]
 
 

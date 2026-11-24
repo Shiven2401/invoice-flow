@@ -1384,7 +1384,8 @@ async function loadLedger() {
   $$("#add-po, #add-vendor, [data-add-vendor]").forEach(b => { b.hidden = !!erp; });
   const src = $("#ledger-source");
   src.hidden = !erp;
-  src.innerHTML = erp ? `${ERP_ICON}<span>Vendors and purchase orders come from <b>Odoo</b> (${esc(erp.db)}): add or change them there.
+  src.innerHTML = erp ? `${ERP_ICON}<span>Vendors and purchase orders come from <b>Odoo</b> (${esc(erp.db)}): add, change or approve them on the
+    <a href="#erp">Odoo ERP page</a> (they're saved in Odoo) or in Odoo itself.
     "Billed so far" is Odoo's own count, draft bills included; a vendor tagged <b>Blocked</b> in Odoo is blocked here.
     ${extLink(erp.pos, "Purchase orders in Odoo")} · ${extLink(erp.vendors, "Vendors in Odoo")}</span>` : "";
   $("#vendor-table").innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>GSTIN</th><th>Status</th><th>Source</th><th>Approval note</th><th></th></tr></thead><tbody>
@@ -1560,7 +1561,7 @@ function closeLightbox() {
 /* ------------------------------------------------------------------ routing -- */
 function route() {
   const tab = (location.hash || "#process").slice(1);
-  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) ? tab : "process";
+  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) || (tab === "erp" && erpOn()) ? tab : "process";
   $$(".view").forEach(v => v.hidden = v.id !== `view-${name}`);
   $$(".tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.tab === name));
   $$(".tabs a").forEach(a => a.dataset.tab === name ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
@@ -1570,6 +1571,7 @@ function route() {
 function refreshVisible() {
   const tab = (location.hash || "#process").slice(1);
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
+  else if (tab === "erp" && erpOn()) loadErp();
 }
 
 /* ------------------------------------------------------------ sort and filter sheet -- */
@@ -1720,6 +1722,8 @@ async function init() {
   wireSheet();
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
+  $$("[data-erp-nav]").forEach(a => { a.hidden = !S.cfg.erp; });   // the Odoo ERP page, for an account connected to Odoo
+  if (S.cfg.erp) wireErp();
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
   $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
     + (S.cfg.erp ? `<br>Connected to ${extLink(S.cfg.erp.home, "<b>Odoo</b>")} (${esc(S.cfg.erp.db)})` : "")
