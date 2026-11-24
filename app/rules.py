@@ -31,7 +31,7 @@ CODE_LABEL = {
     "USER_INPUT_CONFLICT": "Typed value differs from document", "USER_ENTERED": "Value typed in at upload",
     "PO_NOT_NEEDED": "Vendor doesn't use POs", "PO_ASSIGNED": "PO chosen by a person", "PO_REF_ACCEPTED": "PO number accepted earlier", "VENDOR_ADDED": "Vendor approved for this folder", "PO_APPROVED": "PO approved for this upload",
     # the 3-way match and the ERP (accounts connected to Odoo)
-    "QTY_NOT_RECEIVED": "Billed more than received", "QTY_OVER_PO": "Billed beyond the PO quantity", "RATE_ABOVE_PO": "Rate above the PO",
+    "QTY_NOT_RECEIVED": "Goods not received", "QTY_OVER_PO": "Billed beyond the PO quantity", "RATE_ABOVE_PO": "Rate above the PO",
     "RATE_OVER_PO": "Rate over 10% above the PO", "LINE_NOT_ON_PO": "Item not on the PO", "LINES_UNREADABLE": "Quantities unreadable",
     "THREE_WAY_OK": "Matches PO and receipt", "ERP_UNREACHABLE": "ERP unreachable", "ERP_POST_FAILED": "Bill not created in the ERP",
 }
@@ -502,7 +502,8 @@ def three_way_check(po_line, inv_qty, inv_rate):
                                                         f"left to bill ({n(ordered)} ordered, {n(billed)} already billed)."))
     elif inv_qty > billable + eps:
         res["qty_ok"] = False
-        fs.append(F("QTY_NOT_RECEIVED", "hold", "budget", f"{name}: the invoice bills {n(inv_qty)} but only {n(received)} "
+        fs.append(F("QTY_NOT_RECEIVED", "hold", "budget", ("Goods not received. " if not received else "Goods not fully received. ")
+                                                          + f"{name}: the invoice bills {n(inv_qty)} but only {n(received)} "
                                                           f"{'has' if received == 1 else 'have'} been received" + (f" and {n(billed)} already billed" if billed else "")
                                                           + f", so {n(max(billable, 0))} can be paid now."))
     if inv_rate is not None and po_rate:

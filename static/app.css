@@ -1647,4 +1647,23 @@ body.signed-out { background: var(--paper); }
 .wz-erp a { font-weight: 600; }
 .bad-text { color: var(--bad); }
 .three-way th, .three-way td { padding: 7px 10px; white-space: nowrap; }
-.three-way td:first-child { white-space: normal; min-width: 140px; }
+.three-way td:first-child { white-space: normal; min-width: 140px; }/* Odoo, visible from the Dashboard: the strip under the title, History's "In Odoo" column, and the detail panel's record */
+.erp-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; margin: 0 0 18px;
+  padding: 12px 16px; border-radius: 16px; background: var(--lav-wash); color: var(--lav); font-size: 13.5px; line-height: 1.5; }
+.erp-strip[hidden] { display: none; }
+.erp-strip-text { display: flex; align-items: flex-start; gap: 10px; min-width: 0; flex: 1 1 320px; }
+.erp-strip-text svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.erp-strip b { color: var(--lav); }
+.erp-strip-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.erp-strip-links a { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: var(--paper-2);
+  color: var(--lav); font-weight: 600; text-decoration: none; white-space: nowrap; border: 1px solid currentColor; }
+.erp-strip-links a:hover { background: var(--lav); color: var(--paper-2); }
+.odoo-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.odoo-cell a, .odoo-record a, .odoo-noted a, .engine a { font-weight: 600; }
+.mini.pen { background: var(--lav-wash); color: var(--lav); }
+.odoo-record { margin-top: 14px; font-size: 13px; line-height: 1.5; }
+.odoo-record .wz-folder-title svg { width: 18px; height: 18px; }
+.odoo-trail { margin: 6px 0 0; padding-left: 18px; }
+.odoo-trail li { margin: 4px 0; }
+.odoo-noted { margin: 8px 0 0; font-size: 13px; }
+@media (max-width: 600px) { .erp-strip { padding: 12px; } .erp-strip-links a { padding: 6px 10px; } }

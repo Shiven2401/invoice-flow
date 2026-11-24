@@ -17,7 +17,7 @@ from pathlib import Path
 import pymupdf
 from loguru import logger
 
-from . import config, db, extract, odoo, rules
+from . import config, db, extract, odoo, odoo_trail, rules
 from .rules import inr
 
 STAGES = [
@@ -179,6 +179,9 @@ def resume(run_id, filename, emit, inputs):
         return _failed(run_id, t0, emit, findings, filename, e)
 
 
+WORD_NOT_POSTED = {"APPROVE": "nothing to post", "HOLD": "held, so nothing is posted", "REJECT": "rejected, so nothing is posted"}
+
+
 def _slim(po_line):
     """What a bill line needs from a PO line (kept with the result, so a person's approval can post the same bill)."""
     return {k: po_line.get(k) for k in ("id", "name", "product_id", "tax_ids")}
@@ -243,7 +246,7 @@ def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
                                            gstin_valid=False, candidates=[]))
             for sid in ("po", "duplicates", "budget"):
                 skip(sid, "Odoo didn't answer - these run when the invoice is checked again")
-            return _finish(run_id, t0, emit, findings, f, meta, doc, d, {}, None, None, None, checks, [], filename)
+            return _finish(run_id, t0, emit, findings, f, meta, doc, d, {}, None, None, None, checks, [], filename, erp=True)
 
         # 5 ------------------------------------------------------- vendor
         start("vendor")
@@ -387,17 +390,17 @@ def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres,
     if config.STAGE_DELAY:
         time.sleep(config.STAGE_DELAY)
     decision = rules.decide(findings)
-    bill = None
-    if erp and decision == "APPROVE":  # 10. post to the ERP: a draft vendor bill in Odoo; a person still posts it there
+    bill, post_error = None, None
+    if erp:
         emit("erp", "running", TITLES["erp"], "", {})
+    if erp and decision == "APPROVE":  # 10. post to the ERP: a draft vendor bill in Odoo; a person still posts it there
         try:
             if not plan:
                 raise odoo.OdooError("there were no lines to put on the bill")
             bill = post_bill(f, plan)
-            emit("erp", "ok", TITLES["erp"], f"Draft bill #{bill['bill_id']} created in Odoo, {bill['linked']} of {bill['lines']} line(s) linked to the PO", bill)
         except odoo.OdooError as e:
+            post_error = str(e)
             findings.append(rules.F("ERP_POST_FAILED", "hold", "erp", f"Every check passed, but Odoo didn't take the draft bill ({e}). Nothing was posted; check again."))
-            emit("erp", "warn", TITLES["erp"], "Odoo didn't take the bill - held", dict(error=str(e)))
             decision = rules.decide(findings)
     ex = rules.explain(decision, findings, f, d, pres, bres)
     vendor = (vres or {}).get("vendor")
@@ -413,6 +416,21 @@ def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres,
         budget=bres, checks=checks, extractor=meta["used"], read_method=doc["method"])
     if erp:  # the bill (if one was created), and what a person's approval would post if it was held
         result.update(erp=bill, erp_plan=plan)
+        if po and po.get("odoo_id"):
+            result["po"]["odoo_id"] = po["odoo_id"]
+        if vendor and vendor.get("odoo_id"):
+            result["vendor"]["odoo_id"] = vendor["odoo_id"]
+        # 11. the audit trail: the PDF and a note on the bill, or for a held or rejected invoice a note on its PO
+        entry =odoo_trail.record(run_id, db.run_owner(run_id), result, decision)
+        noted = f"; the PDF and a note are on {entry['target']['label']}" if entry.get("target") else f"; {entry.get('error', '')}"
+        if bill:
+            emit("erp", "ok", TITLES["erp"], f"Draft bill #{bill['bill_id']} created in Odoo, {bill['linked']} of {bill['lines']} line(s) linked to the PO" + noted,
+                 dict(bill, trail=entry))
+        elif post_error:
+            emit("erp", "warn", TITLES["erp"], "Odoo didn't take the bill - held" + noted, dict(error=post_error, trail=entry))
+        else:
+            emit("erp", "ok" if entry.get("target") else "warn", TITLES["erp"],
+                 f"No bill ({WORD_NOT_POSTED[decision]})" + noted, dict(trail=entry))
     ms = int((time.time() - t0) * 1000)
     # record on the PO ledger only when approved: the NEXT invoice is judged on cumulative billing
     if decision == "APPROVE" and po and bres:

@@ -85,10 +85,14 @@ def setup():
         rows = call("purchase.order.line", "read", ids=rec["order_line"], fields=["name", "product_type", "qty_received"])
         want = {ln["product"]: ln["received"] for ln in po["lines"]}
         for pk in call("stock.picking", "search_read", domain=[["id", "in", rec["picking_ids"]], ["state", "not in", ["done", "cancel"]]], fields=["move_ids"]):
+            todo = 0
             for mv in call("stock.move", "read", ids=pk["move_ids"], fields=["purchase_line_id"]):
                 row = next(r for r in rows if r["id"] == mv["purchase_line_id"][0])
-                call("stock.move", "write", ids=[mv["id"]], vals={"quantity": want[row["name"]] - row["qty_received"], "picked": True})
-            call("stock.picking", "button_validate", ids=[pk["id"]], context={"skip_backorder": True})   # a partial receipt leaves a backorder
+                qty = max(want[row["name"]] - row["qty_received"], 0)
+                todo += qty
+                call("stock.move", "write", ids=[mv["id"]], vals={"quantity": qty, "picked": bool(qty)})
+            if todo:   # a re-run finds the backorder of a partial receipt still open: leave it, the goods aren't here yet
+                call("stock.picking", "button_validate", ids=[pk["id"]], context={"skip_backorder": True})   # a partial receipt leaves a backorder
         for row in rows:
             if row["product_type"] == "service" and row["qty_received"] != want[row["name"]]:
                 call("purchase.order.line", "write", ids=[row["id"]], vals={"qty_received": want[row["name"]]})

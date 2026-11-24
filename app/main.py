@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from . import auth, config, db, export, extract, logs, odoo, pipeline, rules
+from . import auth, config, db, export, extract, logs, odoo, odoo_trail, pipeline, rules
 
 logs.setup()
 logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".format(*extract.llm_provider()) if extract.llm_available() else False,
@@ -142,6 +142,8 @@ def _worker():
 
 
 threading.Thread(target=_worker, daemon=True).start()
+if odoo.enabled():   # phase 4: bills posted or paid in Odoo show here even with nobody on the Dashboard
+    threading.Thread(target=odoo_trail.poll_forever, daemon=True).start()
 
 
 def _resume_stuck_batches():
@@ -375,14 +377,18 @@ def stream(run_id: str, user: dict = Depends(auth.current_user)):
 
 @app.get("/api/runs")
 def runs(user: dict = Depends(auth.current_user)):
+    odoo_trail.refresh(user["id"])   # Posted / Paid from Odoo, at most every 15 s
     return dict(runs=db.list_runs(user["id"], limit=-1))
 
 
 @app.get("/api/runs/{run_id}")
 def run_detail(run_id: str, user: dict = Depends(auth.current_user)):
+    if (db.get_run(run_id, user["id"]) or {}).get("odoo_bill_id"):
+        odoo_trail.refresh(user["id"])
     row = db.get_run(run_id, user["id"])
     if not row:
         raise HTTPException(404, "run not found")
+    row["odoo_trail"] = json.loads(row.get("odoo_trail") or "[]")
     row["result"] = json.loads(row.pop("result_json") or "null")
     row["events"] = json.loads(row.pop("events_json") or "[]")
     row["inputs"] = json.loads(row.pop("inputs_json") or "{}")
@@ -503,6 +509,8 @@ def override(run_id: str, body: dict = Body(...), user: dict = Depends(auth.curr
                   **({"result_json": json.dumps(res), "odoo_bill_id": bill["bill_id"]} if bill else {}),
                   **({"folder_id": None} if decision == "REJECT" else {}))  # rejected invoices don't stay in folders
     logger.bind(run=run_id).info("held invoice manually resolved: {}", decision)
+    if rules.uses_odoo(user["id"]):   # the person's decision goes on the record too: the new bill, or the PO
+        odoo_trail.record(run_id, user["id"], res, decision, by_person=True, person_note=(body.get("note") or "").strip()[:500])
     if decision == "APPROVE" and row["po_number"] and res.get("budget"):
         db.add_ledger(row["po_number"], run_id, res["budget"]["this_net"])
     else:
@@ -872,8 +880,10 @@ def pos(user: dict = Depends(auth.current_user)):
         out.append(dict({k: v for k, v in p.items() if k != "lines"}, vendor_name=(vendors.get(p["vendor_id"]) or {}).get("name") or f"{p['vendor_id']} (removed)",
                         billed=round(billed, 2), remaining=round(p["net_amount"] - billed, 2),
                         pct_billed=round(billed / p["net_amount"] * 100, 1) if p["net_amount"] else 0.0,
-                        invoices=db.ledger_for(p["po_number"], user["id"])))
-    return dict(pos=out, vendors=list(vendors.values()), erp=dict(odoo.info(), connected=True) if erp else None)
+                        invoices=db.ledger_for(p["po_number"], user["id"]),
+                        **({"odoo_url": odoo.link("po", p["odoo_id"])} if p.get("odoo_id") else {})))
+    vendor_rows = [dict(v, odoo_url=odoo.link("vendor", v["odoo_id"])) if v.get("odoo_id") else v for v in vendors.values()]
+    return dict(pos=out, vendors=vendor_rows, erp=dict(odoo.info(), connected=True) if erp else None)
 
 
 def _stats(rows):
@@ -1010,8 +1020,17 @@ def cfg(user: dict = Depends(auth.current_user)):
     return dict(rules=config.RULES, as_of=config.AS_OF, buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
                                ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
-                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES],
-                erp=dict(odoo.info(), connected=True) if rules.uses_odoo(user["id"]) else None)
+                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES], erp=_erp_info(user["id"]))
+
+
+def _erp_info(user_id):
+    """Odoo's name, database and links for a connected account, with its own contact there (phase 1), else None."""
+    if not rules.uses_odoo(user_id):
+        return None
+    pid = (db.user_info(user_id) or {}).get("odoo_partner_id")
+    if not pid:
+        odoo_trail.sync_user_later(user_id)   # an account that existed before the sync, or Odoo was down at sign-up
+    return dict(odoo.info(), connected=True, contact=odoo.link("contact", pid) if pid else None)
 
 
 def _sample_sets(user_id):

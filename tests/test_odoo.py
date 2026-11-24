@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from app import config, main, odoo, rules
+from app import config, main, odoo, odoo_trail, rules
 from test_accounts import clean, client, run_sample  # noqa: F401  (clean is an autouse fixture)
 
 DATA = json.loads((config.DATA_DIR / "odoo_test_data.json").read_text())
@@ -65,15 +65,48 @@ class FakeOdoo:
                     for pl in po["lines"]:
                         if pl["id"] == ln["po_line"]["id"]:
                             pl["qty_invoiced"] += ln["quantity"]
-        self.bills.append(dict(id=len(self.bills) + 1, partner_id=partner_id, ref=invoice_no, date=invoice_date, lines=lines))
+        self.bills.append(dict(id=len(self.bills) + 1, partner_id=partner_id, ref=invoice_no, date=invoice_date, lines=lines,
+                               state="draft", payment_state="not_paid"))
         return len(self.bills)
+
+    # the audit trail and the contacts (phases 1 to 4)
+    def po_by_name(self, name):
+        self._up()
+        return next((dict(id=p["id"], name=p["name"]) for p in self.pos if p["name"] == name), None)
+
+    def upsert_contact(self, ref, name, details_html, email=None):
+        self._up()
+        found = next((c for c in self.contacts if c["ref"] == ref), None)
+        if not found:
+            found = dict(id=900 + len(self.contacts), ref=ref, name=name, email=email, tags=["Invoice Flow User"], comment=details_html)
+            self.contacts.append(found)
+        return found["id"]
+
+    def attach(self, model, res_id, filename, data):
+        self._up()
+        self.attachments.append(dict(id=700 + len(self.attachments), model=model, res_id=res_id, name=filename, size=len(data)))
+        return self.attachments[-1]["id"]
+
+    def note(self, model, res_id, html, attachment_ids=()):
+        self._up()
+        if self.refuse_notes:
+            raise odoo.OdooError("Odoo rejected purchase.order.message_post (HTTP 403): no access")
+        self.notes.append(dict(id=800 + len(self.notes), model=model, res_id=res_id, html=html, attachments=list(attachment_ids)))
+        return self.notes[-1]["id"]
+
+    def bill_states(self, ids):
+        self._up()
+        return {b["id"]: (b["state"], b["payment_state"]) for b in self.bills if b["id"] in ids}
 
 
 @pytest.fixture
 def fake(monkeypatch):
     f = FakeOdoo()
-    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill"):
+    f.contacts, f.attachments, f.notes, f.refuse_notes = [], [], [], False
+    for name in ("vendors", "purchase_orders", "bill_exists", "create_draft_bill", "po_by_name", "upsert_contact", "attach", "note", "bill_states"):
         monkeypatch.setattr(odoo, name, getattr(f, name))
+    monkeypatch.setattr(odoo_trail, "_last_refresh", {})
+    monkeypatch.setattr(odoo_trail, "_tried", {})
     for k, v in dict(ODOO_URL="https://odoo.test", ODOO_DB="test", ODOO_API_KEY="key", ODOO_ACCOUNTS="").items():
         monkeypatch.setenv(k, v)
     return f
@@ -148,21 +181,39 @@ def test_the_guide_five_cases(fake):
     bill = fake.bills[0]
     assert (bill["ref"], bill["date"], bill["partner_id"]) == ("DPF-2001", "2026-11-24", fake.partners["36AAJFD4521K1ZE"]["id"])
     assert [(ln["po_line"]["id"], ln["quantity"], ln["price_unit"]) for ln in bill["lines"]] == [(fake.line("P00001")["id"], 50.0, 180.0)]
-    assert r[0]["result"]["erp"]["bill_id"] == 1 and r[0]["result"]["erp"]["url"].endswith("/odoo/account.move/1")
+    assert r[0]["result"]["erp"]["bill_id"] == 1 and r[0]["result"]["erp"]["url"].endswith("/odoo/action-account.action_move_in_invoice_type/1")
     assert any(e["stage"] == "erp" and e["status"] == "ok" for e in main.BUS[r[0]["id"]]["events"])
     assert fake.line("P00001")["qty_invoiced"] == 50                        # Odoo now counts the 50 kg as billed
     # nothing else was posted: held and rejected invoices never reach Odoo
     assert all(x["result"].get("erp") is None for x in r[1:])
 
 
+# in Odoo, PO-2026-1004's housekeeping hasn't been received (the roadmap's M1 case), so its two invoices wait for that
+ODOO_EXPECT = {"04_split_invoice_1_of_2.pdf": "HOLD", "05_split_invoice_2_of_2.pdf": "HOLD"}
+
+
 def test_the_14_samples_decide_the_same_against_odoo(fake):
     c = client("asha")
     got = {m["file"]: run(c, m["file"])["decision"] for m in SAMPLES}
-    assert got == {m["file"]: m["expected"] for m in SAMPLES}
-    approved = [m["file"] for m in SAMPLES if m["expected"] == "APPROVE"]
-    assert len(fake.bills) == len(approved) == 7
+    assert got == {m["file"]: ODOO_EXPECT.get(m["file"], m["expected"]) for m in SAMPLES}
+    approved = [f for f, d in got.items() if d == "APPROVE"]
+    assert len(fake.bills) == len(approved) == 5
     assert all(ln.get("po_line") for b in fake.bills for ln in b["lines"])  # every bill line linked to a PO line
-    assert [ln["qty_invoiced"] for ln in next(p for p in fake.pos if p["name"] == "PO-2026-1004")["lines"]] == [1.0, 1.0]
+    assert [ln["qty_invoiced"] for ln in next(p for p in fake.pos if p["name"] == "PO-2026-1004")["lines"]] == [0.0, 0.0]
+
+
+def test_roadmap_m1_received_goods_approve_and_missing_goods_hold(fake):
+    c = client("asha")
+    received = run(c, "01_happy_path_clean_exact.pdf")                       # PO-2026-1001: everything received
+    assert received["decision"] == "APPROVE" and received["result"]["po"]["po_number"] == "PO-2026-1001"
+    missing = run(c, "04_split_invoice_1_of_2.pdf")                          # PO-2026-1004: nothing received yet
+    assert missing["decision"] == "HOLD" and missing["result"]["po"]["po_number"] == "PO-2026-1004"
+    reasons = [x for x in missing["result"]["findings"] if x["severity"] == "hold"]
+    assert [x["code"] for x in reasons] == ["QTY_NOT_RECEIVED"] and reasons[0]["message"].startswith("Goods not received.")
+    assert rules.CODE_LABEL["QTY_NOT_RECEIVED"] == "Goods not received" and "Goods not received" in missing["result"]["headline"]
+    # M2: the approved one is a draft bill linked to its PO lines, with the PDF attached
+    assert fake.bills[0]["ref"] == "SOS/26-27/0412" and all(ln.get("po_line") for ln in fake.bills[0]["lines"])
+    assert fake.notes[0]["model"] == "account.move" and fake.notes[0]["attachments"]
 
 
 # ---------------------------------------------- when Odoo is down or says no --
@@ -240,3 +291,107 @@ def test_without_settings_nothing_changes(fake, monkeypatch):
     assert c.get("/api/config").json()["erp"] is None
     r = run(c, SAMPLES[0]["file"])
     assert r["decision"] == "APPROVE" and "erp" not in r["result"] and not fake.bills
+
+
+# ------------------------------------------- the 5-phase workflow: users, audit trail, status back --
+
+def test_phase1_an_account_becomes_a_tagged_contact_once(fake):
+    c = client("asha")
+    uid = main.db.find_user("asha")["id"]
+    for _ in range(100):                                                     # signing up syncs in the background
+        if main.db.user_info(uid)["odoo_partner_id"]:
+            break
+        time.sleep(0.02)
+    odoo_trail._tried.clear()
+    pid = odoo_trail.sync_user(uid) or main.db.user_info(uid)["odoo_partner_id"]
+    assert len(fake.contacts) == 1 and fake.contacts[0]["ref"] == "invoice-flow:asha" and "Invoice Flow User" in fake.contacts[0]["tags"]
+    assert main.db.user_info(uid)["odoo_partner_id"] == pid == fake.contacts[0]["id"]
+    assert c.get("/api/config").json()["erp"]["contact"].endswith(f"/odoo/res.partner/{pid}")
+    assert c.post("/api/login", json=dict(username="asha", password="correct horse")).status_code == 200
+    time.sleep(0.1)
+    assert len(fake.contacts) == 1                                           # signing in again never makes a second one
+
+
+def test_phase2_an_approved_bill_gets_the_pdf_and_a_note(fake):
+    c = client("asha")
+    r = run(c, ODOO_CASES[0])
+    assert r["decision"] == "APPROVE"
+    (n,) = fake.notes
+    assert (n["model"], n["res_id"]) == ("account.move", 1) and n["attachments"] == [fake.attachments[0]["id"]]
+    assert fake.attachments[0]["name"] == ODOO_CASES[0] and fake.attachments[0]["size"] > 1000
+    assert "Invoice DPF-2001 approved" in n["html"] and "asha" in n["html"] and "3-way match" in n["html"]
+    assert r["odoo_trail"][0]["target"]["label"] == "draft bill #1"
+    row = next(x for x in c.get("/api/runs").json()["runs"] if x["id"] == r["id"])
+    assert row["odoo"]["bill_id"] == 1 and row["odoo"]["status"] == "draft"
+
+
+def test_phase3_held_and_rejected_invoices_are_noted_on_their_po(fake):
+    c = client("asha")
+    held, rejected = run(c, ODOO_CASES[1]), run(c, ODOO_CASES[2])
+    assert (held["decision"], rejected["decision"]) == ("HOLD", "REJECT") and not fake.bills
+    po = {p["name"]: p["id"] for p in fake.pos}
+    assert [(n["model"], n["res_id"]) for n in fake.notes] == [("purchase.order", po["P00002"]), ("purchase.order", po["P00003"])]
+    assert "Invoice GFF-3101 put on hold" in fake.notes[0]["html"] and "Invoice GFF-3102 rejected" in fake.notes[1]["html"]
+    assert all(n["attachments"] for n in fake.notes) and "Decision recorded by <b>asha</b>" in fake.notes[1]["html"]
+    nopo = run(c, ODOO_CASES[4])                                             # the PO isn't in Odoo: noted on the vendor
+    assert nopo["decision"] == "HOLD" and fake.notes[-1]["model"] == "res.partner"
+    # checked again with the same answer: no second note; a person's decision: a note of its own
+    assert c.post(f"/api/runs/{held['id']}/recheck").status_code == 200
+    wait(held["id"])
+    assert len(fake.notes) == 3
+    assert c.post(f"/api/runs/{held['id']}/override", json=dict(decision="REJECT", note="goods short, vendor told")).status_code == 200
+    assert fake.notes[-1]["res_id"] == po["P00002"] and "rejected" in fake.notes[-1]["html"] and "goods short, vendor told" in fake.notes[-1]["html"]
+    assert [t["by_person"] for t in c.get(f"/api/runs/{held['id']}").json()["odoo_trail"]] == [False, True]
+
+
+def test_phase4_posted_and_paid_come_back_from_odoo(fake):
+    c = client("asha")
+    r = run(c, ODOO_CASES[0])
+    status = lambda: next(x for x in c.get("/api/runs").json()["runs"] if x["id"] == r["id"])["odoo"]["status"]
+    for state, pay, shown in [("posted", "not_paid", "posted"), ("posted", "in_payment", "in_payment"), ("posted", "paid", "paid")]:
+        fake.bills[0].update(state=state, payment_state=pay)
+        odoo_trail._last_refresh.clear()
+        assert status() == shown
+    fake.bills[0].update(state="draft")                                      # paid is final: no more reads for it
+    odoo_trail._last_refresh.clear()
+    assert status() == "paid" and main.db.open_bills() == []
+
+
+def test_the_record_never_changes_a_decision(fake):
+    fake.refuse_notes = True
+    r = run(client("asha"), ODOO_CASES[0])
+    assert r["decision"] == "APPROVE" and r["result"]["erp"]["bill_id"] == 1
+    assert "didn't take the note" in r["odoo_trail"][0]["error"]
+    fake.refuse_notes, fake.down = False, True
+    down = run(client("ravi"), ODOO_CASES[0])
+    assert down["decision"] == "HOLD" and "didn't answer" in down["odoo_trail"][0]["error"] and len(fake.notes) == 0
+
+
+def test_xmlrpc_sends_the_same_calls(monkeypatch):
+    """ODOO_PROTOCOL=xmlrpc: authenticate once, then execute_kw with the ids first and the rest by name."""
+    sent = []
+
+    class Proxy:
+        def __init__(self, url, **kw):
+            self.url = url
+
+        def authenticate(self, db, login, key, ctx):
+            sent.append(("authenticate", db, login))
+            return 7
+
+        def execute_kw(self, *a):
+            sent.append(a)
+            return [1]
+
+    monkeypatch.setattr(odoo.xmlrpc.client, "ServerProxy", Proxy)
+    monkeypatch.setattr(odoo, "_uid", {})
+    for k, v in dict(ODOO_URL="https://odoo.test", ODOO_DB="db", ODOO_API_KEY="key", ODOO_USER="me@x.test", ODOO_PROTOCOL="xmlrpc").items():
+        monkeypatch.setenv(k, v)
+    odoo.note("purchase.order", 5, "<p>hi</p>")
+    odoo._call("res.partner", "search_read", domain=[["vat", "=", "X"]], fields=["id"])
+    odoo._call("res.partner", "create", vals_list=[{"name": "A"}])
+    assert sent[3][4:7] == ("create", [[{"name": "A"}]], {})                   # create takes its records positionally
+    assert sent[0] == ("authenticate", "db", "me@x.test") and len(sent) == 4   # one login for every call
+    assert sent[1][:6] == ("db", 7, "key", "purchase.order", "message_post", [[5]]) and sent[1][6]["body_is_html"] is True
+    assert sent[2][3:7] == ("res.partner", "search_read", [], dict(domain=[["vat", "=", "X"]], fields=["id"]))
+    assert odoo.info()["protocol"] == "XML-RPC"

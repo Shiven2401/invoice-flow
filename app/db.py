@@ -77,6 +77,12 @@ def init(c):
         c.execute("ALTER TABLE runs ADD COLUMN hidden INTEGER DEFAULT 0")
     if "odoo_bill_id" not in run_cols:  # the draft vendor bill created in Odoo when the invoice was approved
         c.execute("ALTER TABLE runs ADD COLUMN odoo_bill_id INTEGER")
+    if "odoo_status" not in run_cols:  # that bill's state as Odoo last reported it: draft, posted, in_payment, paid, ...
+        c.execute("ALTER TABLE runs ADD COLUMN odoo_status TEXT")
+    if "odoo_trail" not in run_cols:  # every record this invoice left in Odoo (JSON list); kept across re-checks
+        c.execute("ALTER TABLE runs ADD COLUMN odoo_trail TEXT")
+    if "odoo_partner_id" not in {r[1] for r in c.execute("PRAGMA table_info(users)")}:  # the account's contact in Odoo
+        c.execute("ALTER TABLE users ADD COLUMN odoo_partner_id INTEGER")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(ledger)")}:
         c.execute("ALTER TABLE ledger ADD COLUMN user_id INTEGER")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(vendors)")}:  # the key changes, so the table is rebuilt
@@ -129,6 +135,28 @@ def username(user_id):
     with _lock:
         r = conn().execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
     return r[0] if r else None
+
+
+def user_info(user_id):
+    """id, username, created_at, pw_hash and odoo_partner_id of an account, or None."""
+    with _lock:
+        r = conn().execute("SELECT id,username,created_at,pw_hash,odoo_partner_id FROM users WHERE id=?", (user_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def set_odoo_partner(user_id, partner_id):
+    with _lock:
+        conn().execute("UPDATE users SET odoo_partner_id=? WHERE id=?", (partner_id, user_id))
+        conn().commit()
+
+
+def open_bills(user_id=None):
+    """(run id, bill id, user id) of runs whose Odoo bill may still change: not yet paid, reversed, cancelled or deleted."""
+    q = ("SELECT id,odoo_bill_id,user_id FROM runs WHERE odoo_bill_id IS NOT NULL AND "
+         "COALESCE(odoo_status,'') NOT IN ('paid','reversed','cancel','deleted')")
+    with _lock:
+        rows = conn().execute(q + (" AND user_id=?" if user_id is not None else ""), (user_id,) if user_id is not None else ()).fetchall()
+    return [tuple(r) for r in rows]
 
 
 def add_session(token_hash, user_id, expires_at, now_ts):
@@ -211,7 +239,8 @@ def list_runs(user_id, limit=500):
     with _lock:
         rows = conn().execute(
             "SELECT id,created_at,filename,status,decision,final_decision,override_note,vendor_name,vendor_id,"
-            "invoice_number,invoice_date,po_number,net,total,extractor,duration_ms,result_json,inputs_json,folder_id,batch_id "
+            "invoice_number,invoice_date,po_number,net,total,extractor,duration_ms,result_json,inputs_json,folder_id,batch_id,"
+            "odoo_bill_id,odoo_status,odoo_trail "
             "FROM runs WHERE user_id=? ORDER BY created_at DESC, rowid DESC LIMIT ?", (user_id, limit)).fetchall()
     out = []
     for r in rows:
@@ -221,6 +250,12 @@ def list_runs(user_id, limit=500):
         d["headline"] = res.get("headline")
         d["codes"] = [x["code"] for x in res.get("findings", []) if x["severity"] in ("hold", "reject")]
         d["flags"] = sorted({x["code"] for x in res.get("findings", [])})  # every finding, warnings included
+        trail = json.loads(d.pop("odoo_trail") or "[]")
+        if d["odoo_bill_id"] or trail:   # where this invoice left its record in Odoo: the bill, or a note on the PO
+            last = next((t for t in reversed(trail) if t.get("target")), None)
+            d["odoo"] = dict(bill_id=d["odoo_bill_id"], bill_url=(res.get("erp") or {}).get("url"), status=d["odoo_status"],
+                             noted_on=last["target"] if last else None, error=trail[-1].get("error") if trail else None)
+        d.pop("odoo_status")
         out.append(d)
     return out
 

@@ -241,12 +241,40 @@ const DETAIL = {
         </tbody></table></div><p class="muted">What can be paid now is what was received and not billed yet. Up to ${d.tolerance_pct}% over the PO rate is fine.</p></div>` : ""}`;
   },
 
-  erp: d => d.bill_id
+  erp: d => (d.bill_id
     ? kv([["Draft bill", `<a href="${esc(d.url)}" target="_blank" rel="noopener">#${d.bill_id} in Odoo ↗</a>`],
           ["Lines", `${d.lines} <span class="muted">(${d.linked} linked to the PO, so Odoo updates what's been billed)</span>`],
           ["Status", `<span class="pill pen">Draft</span> <span class="muted">a person posts it in Odoo</span>`]])
-    : `<p><span class="pill warn">${esc(d.error || "Not posted")}</span></p>`,
+    : d.error ? `<p><span class="pill warn">${esc(d.error)}</span></p>` : "")
+    + (d.trail ? `<p class="odoo-noted">${d.trail.target ? `Audit note${(d.trail.attachment_ids || []).length ? " and the PDF" : ""} on
+        <a href="${esc(d.trail.target.url)}" target="_blank" rel="noopener">${esc(d.trail.target.label)} ↗</a>` : esc(d.trail.error || "")}</p>` : ""),
 };
+
+/* what an invoice left in Odoo (phases 2 to 4): its bill with the state Odoo reports, and every note on the bill or PO */
+const ODOO_STATUS = { draft: ["Draft", "pen"], posted: ["Posted", "ok"], in_payment: ["In payment", "ok"], paid: ["Paid", "ok"],
+  partial: ["Partly paid", "warn"], reversed: ["Reversed", "bad"], cancel: ["Cancelled", "bad"], deleted: ["Deleted in Odoo", "bad"] };
+const odooStatus = s => { const [t, c] = ODOO_STATUS[s || "draft"] || [s, "pen"]; return `<span class="mini ${c}">${esc(t)}</span>`; };
+const DECIDED = { APPROVE: "approved", HOLD: "put on hold", REJECT: "rejected" };
+const extLink = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener">${text} ↗</a>`;
+
+function odooRecord(run) {
+  const trail = run.odoo_trail || [], bill = (run.result || {}).erp || {};
+  if (!erpOn() || (!bill.bill_id && !trail.length)) return "";
+  const items = trail.slice().reverse().map(t => `<li>${t.target
+    ? `${extLink(t.target.url, esc(t.target.label))}: ${DECIDED[t.decision] || ""} ${t.by_person ? `by ${esc(t.by)}` : `by the checks, for ${esc(t.by)}`}${(t.attachment_ids || []).length ? ", PDF attached" : ""}`
+    : `<span class="muted">${esc(t.error || "Not recorded")}</span>`}<span class="muted"> · ${esc((t.at || "").slice(0, 16).replace("T", " "))}</span></li>`).join("");
+  return `<div class="odoo-record"><p class="wz-folder-title">${ERP_ICON}<span>In Odoo</span></p>
+    ${bill.bill_id ? `<p>${extLink(bill.url, `Vendor bill #${bill.bill_id}`)} ${odooStatus(run.odoo_status)}</p>` : ""}
+    ${items ? `<ul class="odoo-trail">${items}</ul>` : ""}</div>`;
+}
+
+function odooCell(r) {                                     // the History table's "In Odoo" column
+  const o = r.odoo;
+  if (!o) return '<span class="muted">–</span>';
+  if (o.bill_id) return `<span class="odoo-cell">${extLink(o.bill_url || `${S.cfg.erp.bills}/${o.bill_id}`, `Bill #${o.bill_id}`)} ${odooStatus(o.status)}</span>`;
+  if (o.noted_on) return `<span class="odoo-cell">${extLink(o.noted_on.url, `Note on ${esc(o.noted_on.label.replace(/^purchase order /, ""))}`)}</span>`;
+  return `<span class="muted" title="${esc(o.error || "")}">Not recorded</span>`;
+}
 
 /* ------------------------------------------------------------- run view -- */
 class RunView {
@@ -656,10 +684,20 @@ class Wizard {
     return `<div class="wz-stamp"><div class="stamp big ${D.cls}${this.fresh ? "" : " still"}" role="status">${D.label}</div><p class="wz-by">${by}</p>
       ${kv([["File", esc(this.filename)], ["Vendor", val(f.vendor_name)], ["Invoice number", val(f.invoice_number)], ["Invoice date", val(f.invoice_date)], ["Total", val(f.total, inr)]])}
       ${folderName(run.folder_id) ? `<p class="wz-saved">${FOLDER_ICON}<span>Saved in <b>${esc(folderName(run.folder_id))}</b>${{ approvals: " automatically, as chosen on the Approvals step", vendor: " automatically, with this vendor's earlier bills" }[this.autoFiled()] || ""}</span></p>` : ""}
-      ${(run.result || {}).erp && run.result.erp.bill_id ? `<p class="wz-saved wz-erp">${ERP_ICON}<span>Posted to Odoo as draft bill <b>#${run.result.erp.bill_id}</b>${run.result.erp.linked ? ", linked to the PO" : ""}.
-        <a href="${esc(run.result.erp.url)}" target="_blank" rel="noopener">Open in Odoo ↗</a></span></p>` : ""}
+      ${this.odooLine()}
       <div data-role="batch-status">${batchStatus(batchOf(this.id))}</div>
       <div class="wz-actions center"><a class="btn" href="#dashboard">Open the dashboard</a><button class="btn primary" type="button" data-new>New document</button></div></div>`;
+  }
+
+  odooLine() {                                             // the stamp's line about Odoo: the bill, or the note on the PO
+    const run = this.run, bill = (run.result || {}).erp, trail = run.odoo_trail || [], last = trail[trail.length - 1];
+    if (!erpOn()) return "";
+    const pdf = last && (last.attachment_ids || []).length ? " with the PDF" : "";
+    if (bill && bill.bill_id) return `<p class="wz-saved wz-erp">${ERP_ICON}<span>Posted to Odoo as draft bill <b>#${bill.bill_id}</b>${bill.linked ? ", linked to the PO" : ""}${last && last.target ? `, ${pdf ? "with the PDF and " : "with "}an audit note` : ""}.
+        ${extLink(bill.url, "Open in Odoo")}</span></p>`;
+    if (last && last.target) return `<p class="wz-saved wz-erp">${ERP_ICON}<span>No bill in Odoo; the decision is noted on <b>${esc(last.target.label)}</b>${pdf}.
+        ${extLink(last.target.url, "Open in Odoo")}</span></p>`;
+    return last ? `<p class="wz-saved wz-erp">${ERP_ICON}<span>${esc(last.error || "Not recorded in Odoo")}</span></p>` : "";
   }
 
   autoFiled() {                                            // why the system filed it ("approvals" | "vendor"), if it hasn't been moved since
@@ -1037,6 +1075,7 @@ async function loadDashboard() {
   S.history = rs.runs.filter(r => eff(r) !== "REJECT" && (f == null || r.folder_id === f));
   if (S.view.dashTab === "analytics") dashTab("analytics");
   $("#dash-title").textContent = f == null ? "All invoices" : folderName(f) || "Folder";
+  renderErpStrip();
   renderPeriods();
   const st = await api(`/api/stats${scope()}`);
   const c = st.counts;
@@ -1073,15 +1112,33 @@ function historyRow(r) {
   return `<tr class="click" tabindex="0" data-open="${r.id}"><td title="${received}">${r.invoice_date ? esc(dayName(r.invoice_date)) : none()}</td><td>${esc(r.filename)}</td><td>${val(r.vendor_name)}</td><td>${val(r.invoice_number)}</td>
     <td>${esc(r.po_number || "–")}</td><td class="right">${r.total != null ? inr(r.total) : "–"}</td>
     <td><span class="mini ${d.cls}">${d.label}</span>${r.final_decision ? ' <span class="muted" title="Resolved by a person">by a person</span>' : ""}</td><td>${why}</td><td class="muted">${esc((r.extractor || "").split(":")[0])}</td>
-    <td class="row-actions"><button class="icon-btn row-remove" type="button" data-remove="${r.id}" title="${DELETE_TITLE}"
+    ${erpOn() ? `<td>${odooCell(r)}</td>` : ""}<td class="row-actions"><button class="icon-btn row-remove" type="button" data-remove="${r.id}" title="${DELETE_TITLE}"
       aria-label="Delete ${esc(r.filename)} permanently">${REMOVE_ICON}</button></td></tr>`;
+}
+
+const historyCols = () => erpOn() ? 11 : 10;
+
+/* the Dashboard's Odoo strip: where the bills went, what Odoo says about them, and the way into Odoo */
+function renderErpStrip() {
+  const box = $("#erp-strip"), erp = S.cfg && S.cfg.erp;
+  box.hidden = !erp;
+  if (!erp) return;
+  const done = S.history.filter(r => r.status === "done"), bills = done.filter(r => r.odoo && r.odoo.bill_id);
+  const n = s => bills.filter(r => (r.odoo.status || "draft") === s).length;
+  const notes = done.filter(r => r.odoo && !r.odoo.bill_id && r.odoo.noted_on).length;
+  const parts = [[n("draft"), "draft"], [n("posted"), "posted"], [n("in_payment") + n("partial"), "being paid"], [n("paid"), "paid"]]
+    .filter(([c]) => c).map(([c, w]) => `<b>${c}</b> ${w}`);
+  box.innerHTML = `<div class="erp-strip-text">${ERP_ICON}<span>Connected to <b>Odoo</b> (${esc(erp.db)}, ${esc(erp.protocol)}).
+      ${bills.length ? `${plural(bills.length, "vendor bill")}: ${parts.join(" · ")}.` : "No bills posted yet."}
+      ${notes ? `${plural(notes, "held or rejected invoice")} noted on ${notes === 1 ? "its" : "their"} PO.` : ""}</span></div>
+    <div class="erp-strip-links">${extLink(erp.bills, "Bills in Odoo")}${extLink(erp.pos, "Purchase orders")}${erp.contact ? extLink(erp.contact, "Your contact") : ""}</div>`;
 }
 
 function historyGroup(key, rows) {
   const g = S.view.group, id = `${g}:${key}`, open = !S.collapsed.has(id);
   const total = rows.reduce((t, r) => t + (r.total || 0), 0), list = rows.map(historyRow).join("");
   if (g === "none") return `<tbody>${list}</tbody>`;
-  return `<tbody><tr class="group-row"><td colspan="10"><button class="group-toggle" type="button" data-group="${esc(id)}" aria-expanded="${open}">
+  return `<tbody><tr class="group-row"><td colspan="${historyCols()}"><button class="group-toggle" type="button" data-group="${esc(id)}" aria-expanded="${open}">
       <span class="caret" aria-hidden="true">${open ? "▾" : "▸"}</span><span>${esc(GROUPS[g].name(key))}</span>
       <span class="count">${rows.length} invoice${rows.length !== 1 ? "s" : ""}</span><span class="sum">${inr(total)}</span></button></td></tr>${open ? list : ""}</tbody>`;
 }
@@ -1102,9 +1159,9 @@ function renderHistory() {
   const group = GROUPS[S.view.group], byKey = new Map();
   rows.forEach(r => { const k = group.key(r) || ""; byKey.set(k, [...(byKey.get(k) || []), r]); });
   const keys = [...byKey.keys()].sort((a, b) => !a - !b || (group.newest ? b.localeCompare(a) : a.localeCompare(b)));
-  $("#history").innerHTML = `<thead><tr><th>Invoice date</th><th>File</th><th>Vendor</th><th>Invoice no.</th><th>PO</th><th class="right">Total</th><th>Outcome</th><th>Why</th><th>Read by</th><th aria-label="Remove"></th></tr></thead>
+  $("#history").innerHTML = `<thead><tr><th>Invoice date</th><th>File</th><th>Vendor</th><th>Invoice no.</th><th>PO</th><th class="right">Total</th><th>Outcome</th><th>Why</th><th>Read by</th>${erpOn() ? "<th>In Odoo</th>" : ""}<th aria-label="Remove"></th></tr></thead>
     ${rows.length ? keys.map(k => historyGroup(k, byKey.get(k))).join("")
-      : `<tbody><tr><td class="empty-row" colspan="10">${S.history.length ? "No invoices match these filters." : "No invoices yet."}</td></tr></tbody>`}`;
+      : `<tbody><tr><td class="empty-row" colspan="${historyCols()}">${S.history.length ? "No invoices match these filters." : "No invoices yet."}</td></tr></tbody>`}`;
   if (document.body.classList.contains("sheet-open")) renderSheet();   // the phone's filter page shows the new counts and total
 }
 
@@ -1328,16 +1385,17 @@ async function loadLedger() {
   const src = $("#ledger-source");
   src.hidden = !erp;
   src.innerHTML = erp ? `${ERP_ICON}<span>Vendors and purchase orders come from <b>Odoo</b> (${esc(erp.db)}): add or change them there.
-    "Billed so far" is Odoo's own count, draft bills included; a vendor tagged <b>Blocked</b> in Odoo is blocked here.</span>` : "";
+    "Billed so far" is Odoo's own count, draft bills included; a vendor tagged <b>Blocked</b> in Odoo is blocked here.
+    ${extLink(erp.pos, "Purchase orders in Odoo")} · ${extLink(erp.vendors, "Vendors in Odoo")}</span>` : "";
   $("#vendor-table").innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>GSTIN</th><th>Status</th><th>Source</th><th>Approval note</th><th></th></tr></thead><tbody>
-    ${vendors.map(v => `<tr><td>${esc(v.vendor_id)}</td><td>${esc(v.name)}</td><td>${esc(v.gstin) || '<span class="muted">none</span>'}</td>
+    ${vendors.map(v => `<tr><td>${esc(v.vendor_id)}</td><td>${v.odoo_url ? extLink(v.odoo_url, esc(v.name)) : esc(v.name)}</td><td>${esc(v.gstin) || '<span class="muted">none</span>'}</td>
       <td><span class="mini ${v.status === "approved" ? "ok" : "bad"}">${esc(v.status)}</span></td><td class="muted">${esc(v.source)}</td><td>${esc(v.note)}</td>
       <td>${v.source === "approved in app" ? `<button class="btn quiet" type="button" data-remove-vendor="${esc(v.vendor_id)}">Remove</button>` : ""}</td></tr>`).join("")}</tbody>`;
   $("#po-table").innerHTML = `<thead><tr><th>PO</th><th>Vendor</th><th>For</th><th class="right">PO value</th><th>Billed so far</th><th class="right">Open</th><th>Approved invoices</th></tr></thead><tbody>
     ${pos.map(p => {
       const cls = p.pct_billed > 100.01 ? "over" : p.pct_billed >= 99.9 ? "full" : "";
       const mine = p.source === "added in app";
-      return `<tr><td><b>${esc(p.po_number)}</b>${mine ? `<span class="po-mine">added by you${p.invoices.length ? "" : ` · <button class="link-btn" type="button" data-remove-po="${esc(p.po_number)}">Remove</button>`}</span>` : ""}</td>
+      return `<tr><td><b>${p.odoo_url ? extLink(p.odoo_url, esc(p.po_number)) : esc(p.po_number)}</b>${mine ? `<span class="po-mine">added by you${p.invoices.length ? "" : ` · <button class="link-btn" type="button" data-remove-po="${esc(p.po_number)}">Remove</button>`}</span>` : ""}</td>
         <td>${esc(p.vendor_name)}</td><td>${esc(p.description)}</td><td class="right">${inr(p.net_amount)}<span class="po-gst">+ ${pct(p.gst_rate, 2)} GST</span></td>
         <td><div class="pobar ${cls}" role="img" aria-label="${pct(p.pct_billed)} billed"><i style="width:${Math.min(p.pct_billed, 100)}%"></i></div><span class="muted">${inr(p.billed)} (${pct(p.pct_billed)})</span></td>
         <td class="right">${inr(Math.max(p.remaining, 0))}</td>
@@ -1458,6 +1516,7 @@ async function openDrawer(id) {
           <img src="/api/runs/${id}/preview" alt="First page of ${esc(run.filename)}">
           <span class="bill-zoom">${ZOOM_ICON}<span>Enlarge</span></span></button>
         <div class="drawer-folder" data-role="drawer-folder">${drawerFolder(run)}</div>
+        ${odooRecord(run)}
         <a class="btn quiet drawer-open" href="/api/runs/${id}/file" target="_blank" rel="noopener">Open the original document</a>
       </aside>
       <div class="drawer-main"></div>
@@ -1663,7 +1722,7 @@ async function init() {
   Object.assign(CODE_LABEL, S.cfg.labels);
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
   $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
-    + (S.cfg.erp ? `<br>Connected to <b>Odoo</b> (${esc(S.cfg.erp.db)})` : "")
+    + (S.cfg.erp ? `<br>Connected to ${extLink(S.cfg.erp.home, "<b>Odoo</b>")} (${esc(S.cfg.erp.db)})` : "")
     + (e.key_problem ? `<br><span class="engine-warn" title="${esc(e.key_problem)}">${/GEMINI/.test(e.key_problem) ? "Gemini key rejected: fix it to read handwriting" : "Model key can't be used"}</span>` : "");
   const { runs } = await api("/api/runs");           // survive a page reload
   runs.slice().reverse().forEach(r => S.runs.set(r.id, { id: r.id, filename: r.filename, status: r.status === "done" || r.status === "error" ? "done" : r.status,
@@ -1741,6 +1800,7 @@ async function init() {
   $("#period-kind").addEventListener("change", ev => { S.view.kind = ev.target.value; S.view.pick = ""; saveView(); loadDashboard(); });
   $("#period-pick").addEventListener("change", ev => { S.view.pick = ev.target.value; loadDashboard(); });
   $("#history").addEventListener("click", ev => {
+    if (ev.target.closest("a")) return;                      // a link into Odoo opens Odoo, not the detail panel
     const remove = ev.target.closest("[data-remove]");
     if (remove) { deleteRun(remove); return; }
     const g = ev.target.closest("[data-group]");
@@ -1752,7 +1812,7 @@ async function init() {
     const tr = ev.target.closest("[data-open]"); if (tr) openDrawer(tr.dataset.open);
   });
   $("#history").addEventListener("keydown", ev => {
-    if (ev.key !== "Enter" || ev.target.closest("button")) return;   // Enter on a button inside the row is the button's
+    if (ev.key !== "Enter" || ev.target.closest("button, a")) return;   // Enter on a button or link inside the row is its own
     const tr = ev.target.closest("[data-open]"); if (tr) openDrawer(tr.dataset.open);
   });
   $("#drawer-close").addEventListener("click", closeDrawer);

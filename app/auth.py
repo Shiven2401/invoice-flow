@@ -60,6 +60,8 @@ def _record(key):
 
 
 def _start_session(response, user_id):
+    from . import odoo_trail   # here, not at the top: odoo_trail needs rules, which the app loads after auth
+    odoo_trail.sync_user_later(user_id)   # an account connected to Odoo becomes a contact there (once; in the background)
     token = secrets.token_urlsafe(32)
     now_ts = time.time()
     db.add_session(_digest(token), user_id, now_ts + config.SESSION_DAYS * 86400, now_ts)
