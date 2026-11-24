@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from . import auth, config, db, export, extract, logs, pipeline, rules
+from . import auth, config, db, export, extract, logs, odoo, pipeline, rules
 
 logs.setup()
 logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".format(*extract.llm_provider()) if extract.llm_available() else False,
@@ -202,6 +202,15 @@ def _release_batch(batch_id, user_id, inputs):
     return [dict(id=r["id"], filename=r["filename"]) for r in rows]
 
 
+ODOO_OWNS_VENDORS = ("This account's vendors and purchase orders come from Odoo. Add it there (a vendor with its GSTIN), "
+                     "then check the invoice again.")
+
+
+def _odoo_guard(user_id):
+    if rules.uses_odoo(user_id):
+        raise HTTPException(400, ODOO_OWNS_VENDORS)
+
+
 def _requeue(row):
     """Check a stored invoice again under the same run id, so it isn't caught as a duplicate of itself."""
     run_id = row["id"]
@@ -328,13 +337,13 @@ def _unpack_zip(uf):
 
 @app.post("/api/runs/sample")
 def run_samples(body: dict = Body(...), user: dict = Depends(auth.current_user)):
-    manifest = {m["file"]: m for m in json.loads((config.SAMPLES_DIR / "synthetic" / "manifest.json").read_text())}
+    folder_of = {m["file"]: folder for folder, manifest in _sample_sets(user["id"]) for m in manifest}
     names = body.get("files", [])
     for name in names:
-        if name not in manifest:
+        if name not in folder_of:
             raise HTTPException(404, f"Unknown sample '{name}'")
     _check_capacity(user["id"], len(names))
-    return dict(runs=[dict(id=_enqueue(config.SAMPLES_DIR / "synthetic" / name, name, user["id"]), filename=name) for name in names])
+    return dict(runs=[dict(id=_enqueue(config.SAMPLES_DIR / folder_of[name] / name, name, user["id"]), filename=name) for name in names])
 
 
 @app.get("/api/runs/{run_id}/stream")
@@ -425,6 +434,8 @@ def continue_run(run_id: str, body: dict = Body(...), user: dict = Depends(auth.
     approval, batch_po, all_vendors = body.get("approve_vendor"), body.get("batch_po"), bool(body.get("approve_all_vendors"))
     if approval is not None and not isinstance(approval, dict):
         raise HTTPException(400, "approve_vendor must be an object, such as {\"note\": \"...\"}")
+    if approval is not None or all_vendors:
+        _odoo_guard(user["id"])
     if batch_po not in (None, "accept", "no_po"):
         raise HTTPException(400, "batch_po must be \"accept\" or \"no_po\"")
     if (batch_po or all_vendors) and not row["batch_id"]:
@@ -477,7 +488,19 @@ def override(run_id: str, body: dict = Body(...), user: dict = Depends(auth.curr
     if decision not in ("APPROVE", "REJECT"):
         raise HTTPException(400, "decision must be APPROVE or REJECT")
     res = json.loads(row["result_json"])
+    bill = None
+    if decision == "APPROVE" and rules.uses_odoo(user["id"]) and not res.get("erp"):
+        # the ERP comes first: a person's approval posts the same draft bill an automatic one would. If Odoo won't take
+        # it, nothing is marked approved, so the invoice stays held with the reason
+        if not res.get("erp_plan"):
+            raise HTTPException(400, "This invoice can't go to Odoo: its vendor isn't a vendor there. Add the vendor in Odoo (with its GSTIN), then check the invoice again.")
+        try:
+            bill = pipeline.post_bill(res.get("fields") or {}, res["erp_plan"])
+        except odoo.OdooError as e:
+            raise HTTPException(502, f"Odoo didn't take the draft bill ({e}). The invoice stays on hold; try again.")
+        res["erp"] = bill
     db.update_run(run_id, final_decision=decision, override_note=(body.get("note") or "").strip()[:500],
+                  **({"result_json": json.dumps(res), "odoo_bill_id": bill["bill_id"]} if bill else {}),
                   **({"folder_id": None} if decision == "REJECT" else {}))  # rejected invoices don't stay in folders
     logger.bind(run=run_id).info("held invoice manually resolved: {}", decision)
     if decision == "APPROVE" and row["po_number"] and res.get("budget"):
@@ -540,6 +563,7 @@ def approve_vendor(run_id: str, body: dict = Body(...), user: dict = Depends(aut
     row = db.get_run(run_id, user["id"])
     if not row or row["status"] != "done":
         raise HTTPException(404, "run not found or not finished")
+    _odoo_guard(user["id"])
     res = json.loads(row["result_json"] or "{}")
     if row["final_decision"] or row["decision"] != "HOLD" or not any(x["code"] == "VENDOR_UNKNOWN" for x in res.get("findings", [])):
         raise HTTPException(400, "only an open invoice held for an unknown vendor can have its vendor approved here")
@@ -563,10 +587,10 @@ def approve_vendor(run_id: str, body: dict = Body(...), user: dict = Depends(aut
 
 def _open_pos(vendor_id, user_id):
     """The vendor's open POs that still have a balance: what a person can match a held invoice to."""
-    out = []
-    for p in rules.load_pos(user_id):
+    out, erp = [], rules.uses_odoo(user_id)
+    for p in _master_data(user_id)[1]:
         if p["vendor_id"] == vendor_id and p["status"] == "open":
-            remaining = round(p["net_amount"] - db.billed(p["po_number"], user_id), 2)
+            remaining = round(p["net_amount"] - (p["billed"] if erp else db.billed(p["po_number"], user_id)), 2)
             if remaining > 0.005:
                 out.append(dict(po_number=p["po_number"], description=p["description"], remaining=remaining))
     return out
@@ -600,6 +624,19 @@ def answer_po(run_id: str, body: dict = Body(...), user: dict = Depends(auth.cur
     return dict(ok=True, run=dict(id=run_id, filename=row["filename"]))
 
 
+@app.post("/api/runs/{run_id}/recheck")
+def recheck(run_id: str, user: dict = Depends(auth.current_user)):
+    """Check a held invoice again as it stands: after Odoo is back, the goods are received there, or the vendor or PO
+    has been added there. Every check runs again, against what Odoo (or the PO register) says now."""
+    row = db.get_run(run_id, user["id"])
+    if not row or row["status"] not in ("done", "error"):
+        raise HTTPException(404, "run not found or not finished")
+    if row["final_decision"] or row["decision"] != "HOLD":
+        raise HTTPException(400, "only an open, held invoice can be checked again")
+    _requeue(row)
+    return dict(ok=True, run=dict(id=run_id, filename=row["filename"]))
+
+
 @app.post("/api/runs/{run_id}/treat-as-invoice")
 def treat_as_invoice(run_id: str, user: dict = Depends(auth.current_user)):
     """A person overrules "not an invoice". The automatic check is a judgment call, so it never gets the last word.
@@ -627,6 +664,7 @@ def remove_vendor(vendor_id: str, user: dict = Depends(auth.current_user)):
 def add_vendor(body: dict = Body(...), user: dict = Depends(auth.current_user)):
     """A person adds a vendor on the PO ledger page, before any of its bills arrive. The same rules as approving one
     from a held invoice: a valid GSTIN if given, and no lookalike of a vendor already on file or blocked."""
+    _odoo_guard(user["id"])
     name = re.sub(r"\s+", " ", str(body.get("name") or "")).strip()[:200]
     gstin = re.sub(r"\s+", "", str(body.get("gstin") or "")).upper()
     aliases = [a for a in (re.sub(r"\s+", " ", x).strip()[:200] for x in re.split(r"[,|\n]", str(body.get("aliases") or ""))) if a and a.lower() != name.lower()][:10]
@@ -646,6 +684,7 @@ def add_vendor(body: dict = Body(...), user: dict = Depends(auth.current_user)):
 def add_po(body: dict = Body(...), user: dict = Depends(auth.current_user)):
     """A person raises a purchase order on the PO ledger page. Invoices that cite it are then matched and billed
     against it like any PO in the register."""
+    _odoo_guard(user["id"])
     number = re.sub(r"\s+", " ", str(body.get("po_number") or "")).strip().upper()
     if not rules.PO_NUMBER_RE.match(number):
         raise HTTPException(400, "A PO number needs 2 to 40 letters, digits or / . _ - characters, such as PO-2026-2001.")
@@ -815,16 +854,26 @@ def reset_folder(folder_id: int, user: dict = Depends(auth.current_user)):
     return dict(ok=True, removed=[run_id for run_id, _ in removed])
 
 
+def _master_data(user_id):
+    """Vendors and POs for an account (from Odoo when it's connected), or a clear 502 when Odoo doesn't answer."""
+    try:
+        return rules.load_vendors(user_id), rules.load_pos(user_id)
+    except odoo.OdooError as e:
+        raise HTTPException(502, f"Odoo didn't answer, so the vendors and purchase orders can't be shown ({e}). Try again in a moment.")
+
+
 @app.get("/api/pos")
 def pos(user: dict = Depends(auth.current_user)):
-    vendors = {v["vendor_id"]: v for v in rules.load_vendors(user["id"])}
+    vendor_list, po_list = _master_data(user["id"])
+    vendors, erp = {v["vendor_id"]: v for v in vendor_list}, rules.uses_odoo(user["id"])
     out = []
-    for p in rules.load_pos(user["id"]):
-        billed = db.billed(p["po_number"], user["id"])
-        out.append(dict(p, vendor_name=(vendors.get(p["vendor_id"]) or {}).get("name") or f"{p['vendor_id']} (removed)", billed=round(billed, 2),
-                        remaining=round(p["net_amount"] - billed, 2), pct_billed=round(billed / p["net_amount"] * 100, 1),
+    for p in po_list:
+        billed = p["billed"] if erp else db.billed(p["po_number"], user["id"])  # Odoo counts its own bills, drafts included
+        out.append(dict({k: v for k, v in p.items() if k != "lines"}, vendor_name=(vendors.get(p["vendor_id"]) or {}).get("name") or f"{p['vendor_id']} (removed)",
+                        billed=round(billed, 2), remaining=round(p["net_amount"] - billed, 2),
+                        pct_billed=round(billed / p["net_amount"] * 100, 1) if p["net_amount"] else 0.0,
                         invoices=db.ledger_for(p["po_number"], user["id"])))
-    return dict(pos=out, vendors=list(vendors.values()))
+    return dict(pos=out, vendors=list(vendors.values()), erp=dict(odoo.info(), connected=True) if erp else None)
 
 
 def _stats(rows):
@@ -961,12 +1010,22 @@ def cfg(user: dict = Depends(auth.current_user)):
     return dict(rules=config.RULES, as_of=config.AS_OF, buyer=config.BUYER_NAME, labels=rules.CODE_LABEL,
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
                                ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
-                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES])
+                stages=[dict(id=i, title=t) for i, t in pipeline.STAGES],
+                erp=dict(odoo.info(), connected=True) if rules.uses_odoo(user["id"]) else None)
+
+
+def _sample_sets(user_id):
+    """[(folder, manifest)]: the 14 synthetic samples, and for an account connected to Odoo the Odoo test invoices first."""
+    sets = [("synthetic", json.loads((config.SAMPLES_DIR / "synthetic" / "manifest.json").read_text()))]
+    odoo_manifest = config.SAMPLES_DIR / "odoo" / "manifest.json"
+    if rules.uses_odoo(user_id) and odoo_manifest.exists():
+        sets.insert(0, ("odoo", json.loads(odoo_manifest.read_text())))
+    return sets
 
 
 @app.get("/api/samples")
 def samples(user: dict = Depends(auth.current_user)):
-    return dict(samples=json.loads((config.SAMPLES_DIR / "synthetic" / "manifest.json").read_text()))
+    return dict(samples=[dict(m, set=folder) for folder, manifest in _sample_sets(user["id"]) for m in manifest])
 
 
 GOOGLE_G = ('<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 '

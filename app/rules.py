@@ -13,7 +13,7 @@ import difflib
 import re
 from datetime import date, datetime
 
-from . import config, db
+from . import config, db, odoo
 from .config import RULES
 from .extract import norm_alnum, parse_date
 
@@ -30,11 +30,15 @@ CODE_LABEL = {
     "CREDIT_NOTE": "Credit note", "CURRENCY": "Foreign currency", "UNREADABLE": "Unreadable document", "PROCESSING_ERROR": "Processing error",
     "USER_INPUT_CONFLICT": "Typed value differs from document", "USER_ENTERED": "Value typed in at upload",
     "PO_NOT_NEEDED": "Vendor doesn't use POs", "PO_ASSIGNED": "PO chosen by a person", "PO_REF_ACCEPTED": "PO number accepted earlier", "VENDOR_ADDED": "Vendor approved for this folder", "PO_APPROVED": "PO approved for this upload",
+    # the 3-way match and the ERP (accounts connected to Odoo)
+    "QTY_NOT_RECEIVED": "Billed more than received", "QTY_OVER_PO": "Billed beyond the PO quantity", "RATE_ABOVE_PO": "Rate above the PO",
+    "RATE_OVER_PO": "Rate over 10% above the PO", "LINE_NOT_ON_PO": "Item not on the PO", "LINES_UNREADABLE": "Quantities unreadable",
+    "THREE_WAY_OK": "Matches PO and receipt", "ERP_UNREACHABLE": "ERP unreachable", "ERP_POST_FAILED": "Bill not created in the ERP",
 }
 # Analytics: fraud and control flags, kept apart from the general holds: the first group needs a phone call to the vendor,
 # the second only a corrected copy. Counted at any severity, so a warning still shows up
 FLAG_KIND = {"call": ["VENDOR_GSTIN_MISMATCH", "VENDOR_GSTIN_NAME_MISMATCH", "VENDOR_BLOCKED", "PO_VENDOR_MISMATCH", "DUPLICATE_EXACT",
-                      "INVOICE_NUMBER_REUSED", "POSSIBLE_DUPLICATE", "OVER_BILLED", "USER_INPUT_CONFLICT"],
+                      "INVOICE_NUMBER_REUSED", "POSSIBLE_DUPLICATE", "OVER_BILLED", "USER_INPUT_CONFLICT", "QTY_OVER_PO", "RATE_OVER_PO"],
              "resend": ["GSTIN_FORMAT", "VENDOR_NO_GSTIN", "TAX_BASIS_UNKNOWN", "GST_RATE_MISMATCH", "TAX_RATE_ASSUMED", "ARITH_MISMATCH",
                         "LINE_MATH", "UNGROUNDED_FIELD", "MISSING_FIELD", "FUTURE_DATE"]}
 
@@ -64,8 +68,18 @@ def tol(x):
 
 # ------------------------------------------------------------ master data --
 
+def uses_odoo(user_id):
+    """Is this account connected to Odoo? Then Odoo is the source of truth for its vendors and POs."""
+    return user_id is not None and odoo.serves(db.username(user_id))
+
+
 def load_vendors(user_id):
-    """The shared master list, plus the vendors this account has approved."""
+    """The shared master list, plus the vendors this account has approved. An account connected to Odoo gets Odoo's
+    vendors instead (matched by GSTIN, field vat); a vendor tagged Blocked there is blocked here. Raises odoo.OdooError."""
+    if uses_odoo(user_id):
+        learned = db.vendor_aliases(user_id)
+        return [dict(vendor_id=f"OD{v['id']}", name=v["name"], gstin=v["vat"], status="blocked" if v["blocked"] else "approved",
+                     source="Odoo", odoo_id=v["id"], aliases=learned.get(f"OD{v['id']}", [])) for v in odoo.vendors()]
     out = []
     with open(config.DATA_DIR / "vendors.csv", newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
@@ -81,7 +95,19 @@ def load_vendors(user_id):
 
 
 def load_pos(user_id=None):
-    """The shared PO register, plus the purchase orders this account added on the PO ledger page."""
+    """The shared PO register, plus the purchase orders this account added on the PO ledger page. An account connected
+    to Odoo gets Odoo's confirmed POs instead, each with its lines (ordered, received, already billed) and what has
+    been billed so far. Raises odoo.OdooError."""
+    if uses_odoo(user_id):
+        out = []
+        for p in odoo.purchase_orders():
+            net = p["amount_untaxed"] or 0.0
+            out.append(dict(po_number=p["name"], vendor_id=f"OD{p['partner_id'][0]}", po_date=(p["date_order"] or "")[:10],
+                            description="; ".join(ln["name"] or ln["product_id"][1] for ln in p["lines"])[:200] or p["name"], net_amount=net,
+                            gst_rate=round((p["amount_tax"] or 0.0) / net * 100, 2) if net else 0.0,
+                            status="open" if p["state"] == "purchase" else "closed", source="Odoo", odoo_id=p["id"], lines=p["lines"],
+                            billed=round(sum(ln["qty_invoiced"] * ln["price_unit"] for ln in p["lines"]), 2)))
+        return out
     out = []
     with open(config.DATA_DIR / "purchase_orders.csv", newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
@@ -203,7 +229,7 @@ def vendor_approval_problem(name, gstin, vendors):
 
 
 def next_vendor_id(vendors):
-    return f"V{max(int(v['vendor_id'][1:]) for v in vendors) + 1:03d}"
+    return f"V{max([int(v['vendor_id'][1:]) for v in vendors if v['vendor_id'][1:].isdigit()] or [0]) + 1:03d}"
 
 
 # ---------------------------------------------------------------- amounts --
@@ -449,6 +475,105 @@ def budget_check(po, net, billed_before, invoice_rate):
     return res, fs
 
 
+# ---------------------------------------------------------- 3-way (Odoo) --
+
+def three_way_check(po_line, inv_qty, inv_rate):
+    """3-way match for one invoice line: the PO (what was ordered, at what rate), the receipt (what arrived) and the
+    invoice (what is billed). po_line has product_qty, qty_received, qty_invoiced, price_unit; inv_qty and inv_rate come
+    from the extracted invoice line. Returns (result, findings) in the same format as the other checks.
+
+    1. Never beyond the PO: more than 10% over what the PO still allows (ordered minus billed) is rejected; the PO
+       needs amending first.
+    2. Only what was received: more than has arrived and isn't billed yet is held; the goods may still come, or the
+       vendor billed too early. A person can wait for the receipt or approve it anyway.
+    3. The rate: the same bands as the PO total. Up to 2% over the PO rate is fine, 2-10% goes to a person, beyond 10%
+       is rejected. Billing below the PO rate is fine."""
+    name = po_line.get("name") or (po_line.get("product_id") or [None, ""])[1] or "This line"   # a PO line may have no description of its own
+    ordered, received, billed, po_rate = (float(po_line.get(k) or 0) for k in ("product_qty", "qty_received", "qty_invoiced", "price_unit"))
+    billable = round(received - billed, 3)        # arrived and not billed yet: what can be paid now
+    open_on_po = round(ordered - billed, 3)       # what the PO still allows at all
+    eps = max(0.001, ordered * 1e-4)
+    res = dict(line=name, ordered=ordered, received=received, billed_before=billed, billable=max(billable, 0.0), invoiced=inv_qty,
+               po_rate=po_rate, invoice_rate=inv_rate, rate_diff_pct=None, qty_ok=True, rate_ok=True)
+    fs, n = [], (lambda x: f"{x:g}")
+    if inv_qty > open_on_po * (1 + RULES["hold_band_pct"] / 100) + eps:
+        res["qty_ok"] = False
+        fs.append(F("QTY_OVER_PO", "reject", "budget", f"{name}: the invoice bills {n(inv_qty)} but the PO has only {n(max(open_on_po, 0))} "
+                                                        f"left to bill ({n(ordered)} ordered, {n(billed)} already billed)."))
+    elif inv_qty > billable + eps:
+        res["qty_ok"] = False
+        fs.append(F("QTY_NOT_RECEIVED", "hold", "budget", f"{name}: the invoice bills {n(inv_qty)} but only {n(received)} "
+                                                          f"{'has' if received == 1 else 'have'} been received" + (f" and {n(billed)} already billed" if billed else "")
+                                                          + f", so {n(max(billable, 0))} can be paid now."))
+    if inv_rate is not None and po_rate:
+        diff = (inv_rate - po_rate) / po_rate * 100
+        res["rate_diff_pct"] = round(diff, 2)
+        if diff > RULES["hold_band_pct"]:
+            res["rate_ok"] = False
+            fs.append(F("RATE_OVER_PO", "reject", "budget", f"{name}: billed at {inr(inv_rate)}, {diff:.0f}% above the PO rate {inr(po_rate)} "
+                                                            f"- beyond the {RULES['hold_band_pct']:g}% review band."))
+        elif diff > RULES["tolerance_pct"]:
+            res["rate_ok"] = False
+            fs.append(F("RATE_ABOVE_PO", "hold", "budget", f"{name}: billed at {inr(inv_rate)}, {diff:.1f}% above the PO rate {inr(po_rate)} "
+                                                           f"- outside the {RULES['tolerance_pct']:g}% tolerance."))
+    if res["qty_ok"] and res["rate_ok"]:
+        fs.append(F("THREE_WAY_OK", "info", "budget", f"{name}: {n(inv_qty)} billed, {n(received)} received" + (f", {n(billed)} billed before" if billed else "")
+                    + (f"; rate {inr(inv_rate)} against {inr(po_rate)} on the PO." if inv_rate is not None else ".")))
+    return res, fs
+
+
+def pair_lines(f, d, po):
+    """Which PO line each invoice line bills, with the quantity and rate to check: (pairs, findings).
+    A PO with one line takes the whole invoice. With several, each invoice line goes to the PO line whose description it
+    shares most words with; one that matches none is held. A lump-sum line with no quantity ("Q1 instalment") is
+    counted in whole units of the PO line's rate."""
+    lines, net = po.get("lines") or [], d.get("net")
+    items = [li for li in f.get("line_items") or [] if li.get("amount") is not None or li.get("quantity")]
+    fs = []
+
+    def qty_rate(items_, pl):
+        if items_ and all(li.get("quantity") for li in items_):
+            qty = sum(float(li["quantity"]) for li in items_)
+            amount = sum(float(li["amount"]) if li.get("amount") is not None else float(li["quantity"]) * float(li.get("unit_price") or 0) for li in items_)
+            return qty, round(amount / qty, 2) if qty else None
+        amount = net if len(items_) <= 1 else sum(float(li.get("amount") or 0) for li in items_)   # one lump sum: pre-tax
+        if amount is None or not pl.get("price_unit"):
+            return None, None
+        qty = max(1.0, float(round(amount / pl["price_unit"])))
+        return qty, round(amount / qty, 2)
+
+    if not lines:
+        return [], fs
+    if len(lines) == 1:
+        qty, rate = qty_rate(items, lines[0])
+        return ([dict(po_line=lines[0], qty=qty, rate=rate)] if qty else []), ([] if qty else [F(
+            "LINES_UNREADABLE", "hold", "budget", "The invoice's quantity couldn't be read, so it can't be checked against what was received.")])
+    if not items:
+        return [], [F("LINES_UNREADABLE", "hold", "budget", f"{po['po_number']} has {len(lines)} lines, but the invoice's line items couldn't be read, "
+                                                             "so the quantities can't be checked against what was received.")]
+    grouped = {}
+    for li in items:
+        words = _tokens(li.get("description"))
+        best, score = None, 0.0
+        for pl in lines:
+            pw = _tokens((pl.get("name") or "") + " " + ((pl.get("product_id") or [None, ""])[1] or ""))
+            s = len(words & pw) / min(len(words), len(pw)) if words and pw else 0.0
+            if s > score:
+                best, score = pl, s
+        if best is None or score < 0.5:
+            fs.append(F("LINE_NOT_ON_PO", "hold", "budget", f"'{li.get('description') or 'A line'}' isn't a line on {po['po_number']}.", item=li))
+            continue
+        grouped.setdefault(best["id"], (best, []))[1].append(li)
+    pairs = []
+    for pl, its in grouped.values():
+        qty, rate = qty_rate(its, pl)
+        if qty:
+            pairs.append(dict(po_line=pl, qty=qty, rate=rate))
+        else:
+            fs.append(F("LINES_UNREADABLE", "hold", "budget", f"The quantity billed for {pl.get('name')} couldn't be read."))
+    return pairs, fs
+
+
 # -------------------------------------------------------------- duplicates --
 
 def duplicate_check(f, vendor, file_hash, priors, hash_prior):
@@ -486,9 +611,11 @@ def duplicate_check(f, vendor, file_hash, priors, hash_prior):
 # ------------------------------------------------------- decision + wording --
 
 SEV = {"info": 0, "warn": 1, "hold": 2, "reject": 3}
-PRIORITY = ["NOT_AN_INVOICE", "VENDOR_BLOCKED", "DUPLICATE_EXACT", "OVER_BILLED", "VENDOR_GSTIN_NAME_MISMATCH", "VENDOR_GSTIN_MISMATCH",
+PRIORITY = ["NOT_AN_INVOICE", "ERP_UNREACHABLE", "VENDOR_BLOCKED", "DUPLICATE_EXACT", "OVER_BILLED", "QTY_OVER_PO", "RATE_OVER_PO",
+            "VENDOR_GSTIN_NAME_MISMATCH", "VENDOR_GSTIN_MISMATCH",
             "VENDOR_UNKNOWN", "VENDOR_UNIDENTIFIED", "VENDOR_AMBIGUOUS", "USER_INPUT_CONFLICT", "INVOICE_UNCONFIRMED", "MISSING_FIELD", "ARITH_MISMATCH", "POSSIBLE_DUPLICATE",
-            "INVOICE_NUMBER_REUSED", "PO_NOT_FOUND", "PO_VENDOR_MISMATCH", "PO_AMBIGUOUS", "PO_NONE_OPEN", "OVER_TOLERANCE"]
+            "INVOICE_NUMBER_REUSED", "PO_NOT_FOUND", "PO_VENDOR_MISMATCH", "PO_AMBIGUOUS", "PO_NONE_OPEN", "QTY_NOT_RECEIVED", "RATE_ABOVE_PO",
+            "LINE_NOT_ON_PO", "LINES_UNREADABLE", "OVER_TOLERANCE", "ERP_POST_FAILED"]
 
 NEXT = {
     "NOT_AN_INVOICE": "No payment action. File or return the document - it is not a payable invoice.",
@@ -518,9 +645,18 @@ NEXT = {
     "UNREADABLE": "Ask the sender for a clearer copy, or key the invoice in manually.",
     "CREDIT_NOTE": "AP to net this against the original invoice manually.",
     "CURRENCY": "AP to handle foreign-currency invoices manually.",
+    "ERP_UNREACHABLE": "Odoo didn't answer, so nothing was checked against it or posted to it. Check again in a few minutes.",
+    "QTY_NOT_RECEIVED": "Wait for the goods to be received in Odoo, or ask the vendor to bill only what was delivered (draft below).",
+    "QTY_OVER_PO": "Do not pay beyond the PO. Ask procurement to amend the PO, or the vendor to reissue within it (draft below).",
+    "RATE_ABOVE_PO": "Procurement to approve the price difference, or ask the vendor to bill at the PO rate (draft below).",
+    "RATE_OVER_PO": "Do not pay. Ask the vendor to reissue the invoice at the PO rate.",
+    "LINE_NOT_ON_PO": "Procurement to confirm the item was ordered (add it to the PO in Odoo), or ask the vendor to remove it (draft below).",
+    "LINES_UNREADABLE": "Check the quantities against the receipt in Odoo by hand, or ask the sender for a clearer copy.",
+    "ERP_POST_FAILED": "The draft bill couldn't be created in Odoo. Check again; if it keeps failing, create it in Odoo by hand.",
 }
 VENDOR_FIXABLE = {"MISSING_FIELD", "ARITH_MISMATCH", "POSSIBLE_DUPLICATE", "INVOICE_NUMBER_REUSED", "PO_NOT_FOUND",
-                  "PO_VENDOR_MISMATCH", "GST_RATE_MISMATCH", "TAX_BASIS_UNKNOWN", "FUTURE_DATE", "PO_AMBIGUOUS"}
+                  "PO_VENDOR_MISMATCH", "GST_RATE_MISMATCH", "TAX_BASIS_UNKNOWN", "FUTURE_DATE", "PO_AMBIGUOUS",
+                  "QTY_NOT_RECEIVED", "QTY_OVER_PO", "RATE_ABOVE_PO", "LINE_NOT_ON_PO"}
 
 
 def decide(findings):

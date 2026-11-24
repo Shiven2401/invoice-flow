@@ -1,7 +1,8 @@
 """Generate the synthetic demo invoices (14 scenarios) + manifest.json.
 
-Run:  python tools/make_samples.py
-Output: samples/synthetic/*.pdf and samples/synthetic/manifest.json
+Run:  python tools/make_samples.py          (the 14 synthetic samples)
+      python tools/make_samples.py odoo     (only the 5 Odoo test invoices, for accounts connected to Odoo)
+Output: samples/synthetic/*.pdf and samples/synthetic/manifest.json; samples/odoo/*.pdf and samples/odoo/manifest.json
 
 Three layouts, so "different vendors format differently" is real:
   classic  - itemised table, CGST/SGST shown separately, Indian digit grouping
@@ -59,7 +60,8 @@ FAMILY = {  # regular -> (bold, italic)
 }
 
 
-def classic(path, v, inv, font="Helvetica"):
+def classic(path, v, inv, font="Helvetica", buyer=None):
+    buyer = buyer or BUYER
     bold, italic = FAMILY[font]
     c = canvas.Canvas(str(path), pagesize=A4)
     # vendor block (left) and title (right) deliberately share a baseline
@@ -72,9 +74,10 @@ def classic(path, v, inv, font="Helvetica"):
     # meta block (right) next to Bill-To (left)
     c.setFont(bold, 9); c.drawString(40, H - 120, "Bill To:")
     c.setFont(font, 9)
-    c.drawString(40, H - 132, BUYER["name"])
-    c.drawString(40, H - 144, BUYER["addr"])
-    c.drawString(40, H - 156, f"GSTIN: {BUYER['gstin']}")
+    c.drawString(40, H - 132, buyer["name"])
+    c.drawString(40, H - 144, buyer["addr"])
+    if buyer.get("gstin"):
+        c.drawString(40, H - 156, f"GSTIN: {buyer['gstin']}")
     y = H - 120
     rows = []
     if inv.get("number"):
@@ -294,6 +297,52 @@ def build():
     print(f"wrote {len(items)} invoices to {OUT}")
 
 
+ODOO_OUT = OUT.parent / "odoo"
+ODOO_BUYER = {"name": "Invoice Flow", "addr": "Hyderabad, Telangana", "gstin": None}
+ODOO_VENDORS = {  # as they are in Odoo (data/odoo_test_data.json): name and GSTIN must match exactly
+    "DPF": dict(name="Deccan Poultry Farms", gstin="36AAJFD4521K1ZE", phone="040-24601122",
+                addr1="Plot 7, Shamshabad Poultry Estate", addr2="Hyderabad, Telangana 501218"),
+    "GFF": dict(name="Godavari Fresh Fish", gstin="37AAKFG7834M1ZQ", phone="0883-2441199",
+                addr1="Fish Market Road, Kambalapeta", addr2="Rajahmundry, Andhra Pradesh 533103"),
+}
+
+
+def build_odoo():
+    """The code guide's 5 test cases (Step 6), against POs A, B and C in Odoo (P00001-P00003). Fresh chicken and fish are
+    GST-exempt, so the invoices show GST at 0%."""
+    ODOO_OUT.mkdir(parents=True, exist_ok=True)
+    for f in ODOO_OUT.glob("*.pdf"):
+        f.unlink()
+    V, items = ODOO_VENDORS, []
+
+    def add(fname, title, scenario, expected, codes, vendor, inv):
+        classic(ODOO_OUT / fname, V[vendor], inv, buyer=ODOO_BUYER)
+        items.append(dict(file=fname, title=title, scenario=scenario, expected=expected, codes=codes))
+
+    case1 = dict(number="DPF-2001", date="24-Nov-2026", po="P00001", gst=0, lines=[("Chicken Curry Cut", "0207", 50, 180.00)])
+    add("odoo_1_all_match.pdf", "Odoo 1 - everything matches",
+        "Deccan Poultry Farms bills PO A: 50 kg at Rs 180, all 50 kg received. Approved, and posted to Odoo as a draft bill linked to PO A.",
+        "APPROVE", ["THREE_WAY_OK"], "DPF", case1)
+    add("odoo_2_billed_above_received.pdf", "Odoo 2 - billed more than received",
+        "Godavari Fresh Fish bills 40 kg of prawns on PO B, but only 30 kg have been received. Held until the rest arrives.",
+        "HOLD", ["QTY_NOT_RECEIVED"], "GFF", dict(number="GFF-3101", date="24-Nov-2026", po="P00002", gst=0, lines=[("Prawns Medium", "0306", 40, 420.00)]))
+    add("odoo_3_rate_mismatch.pdf", "Odoo 3 - rate 16% above the PO",
+        "Godavari Fresh Fish bills 20 kg of rohu on PO C at Rs 220 against Rs 190 on the PO: beyond the 10% band, so rejected.",
+        "REJECT", ["RATE_OVER_PO"], "GFF", dict(number="GFF-3102", date="24-Nov-2026", po="P00003", gst=0, lines=[("Rohu Fish", "0302", 20, 220.00)]))
+    add("odoo_4_duplicate.pdf", "Odoo 4 - the same invoice again",
+        "Case 1 sent again as a reminder. Rejected as a duplicate, by Invoice Flow and by Odoo, which already has bill DPF-2001.",
+        "REJECT", ["DUPLICATE_EXACT"], "DPF", dict(case1, footer="REMINDER: payment overdue - please remit at the earliest."))
+    add("odoo_5_no_po.pdf", "Odoo 5 - PO not in Odoo",
+        "Deccan Poultry Farms cites PO P00099, which doesn't exist in Odoo. Held until the right PO is given.",
+        "HOLD", ["PO_NOT_FOUND"], "DPF", dict(number="DPF-2002", date="24-Nov-2026", po="P00099", gst=0, lines=[("Chicken Curry Cut", "0207", 10, 180.00)]))
+    manifest = [dict(order=i + 1, **it) for i, it in enumerate(items)]
+    (ODOO_OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    print(f"wrote {len(items)} Odoo test invoices to {ODOO_OUT}")
+
+
 if __name__ == "__main__":
-    build()
+    if sys.argv[1:] == ["odoo"]:
+        build_odoo()
+    else:
+        build()
     sys.exit(0)

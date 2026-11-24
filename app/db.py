@@ -41,7 +41,7 @@ def init(c):
         vendor_name TEXT, vendor_id TEXT, invoice_number TEXT, invoice_date TEXT,
         po_number TEXT, net REAL, total REAL, extractor TEXT, duration_ms INTEGER,
         result_json TEXT, events_json TEXT, inputs_json TEXT, user_id INTEGER, stage_json TEXT, folder_id INTEGER,
-        hidden INTEGER DEFAULT 0);
+        hidden INTEGER DEFAULT 0, odoo_bill_id INTEGER);
     CREATE TABLE IF NOT EXISTS folders(
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, created_at TEXT,
         UNIQUE(user_id, name COLLATE NOCASE));
@@ -75,6 +75,8 @@ def init(c):
         c.execute("ALTER TABLE runs ADD COLUMN batch_id TEXT")
     if "hidden" not in run_cols:  # from a version where removing only hid an invoice; purge_hidden() clears those
         c.execute("ALTER TABLE runs ADD COLUMN hidden INTEGER DEFAULT 0")
+    if "odoo_bill_id" not in run_cols:  # the draft vendor bill created in Odoo when the invoice was approved
+        c.execute("ALTER TABLE runs ADD COLUMN odoo_bill_id INTEGER")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(ledger)")}:
         c.execute("ALTER TABLE ledger ADD COLUMN user_id INTEGER")
     if "user_id" not in {r[1] for r in c.execute("PRAGMA table_info(vendors)")}:  # the key changes, so the table is rebuilt
@@ -120,6 +122,13 @@ def find_user(username):
     with _lock:
         r = conn().execute("SELECT id,username,pw_hash FROM users WHERE username=?", (username,)).fetchone()
     return dict(r) if r else None
+
+
+def username(user_id):
+    """The account name for an id, or None (the worker has only the id; the Odoo switch is by account name)."""
+    with _lock:
+        r = conn().execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+    return r[0] if r else None
 
 
 def add_session(token_hash, user_id, expires_at, now_ts):

@@ -1638,3 +1638,13 @@ body.signed-out { background: var(--paper); }
 #g-text:has(.g-choices) { max-height: none; }
 /* the filter card above History (inside the Overview) keeps its own spacing from the grid around it */
 #dash-overview > .filter-bar { margin: 0; }
+/* Odoo: where an account's vendors and POs come from, the posted bill on the Stamp page, and the 3-way table */
+.erp-source { display: flex; align-items: flex-start; gap: 10px; max-width: 72ch; padding: 12px 14px; border-radius: 14px;
+  background: var(--lav-wash); color: var(--lav); font-size: 13px; line-height: 1.5; }
+.erp-source svg, .wz-erp svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.erp-source b { color: var(--lav); }
+.wz-erp { color: var(--ok); }
+.wz-erp a { font-weight: 600; }
+.bad-text { color: var(--bad); }
+.three-way th, .three-way td { padding: 7px 10px; white-space: nowrap; }
+.three-way td:first-child { white-space: normal; min-width: 140px; }

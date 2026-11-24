@@ -27,8 +27,10 @@ const SEV_MARK = { reject: "✕", hold: "!", warn: "i", info: "✓" };
 const STAGES = [
   ["ingest", "Receive document"], ["read", "Read document"], ["extract", "Extract fields"], ["validate", "Validate and reconcile"],
   ["vendor", "Verify vendor"], ["po", "Match purchase order"], ["duplicates", "Check for duplicates"],
-  ["budget", "PO balance and tolerance"], ["decision", "Decide"],
+  ["budget", "PO balance and tolerance"], ["decision", "Decide"], ["erp", "Post to ERP"],
 ];
+const ERP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 6 20V4a.5.5 0 0 1 .5-.5z"/><path d="M14 3.5V8h4M9 12.5l2 2 4-4"/></svg>`;
+const erpOn = () => !!(S.cfg && S.cfg.erp);
 const CODE_LABEL = {};  // filled from /api/config: the Excel report uses the same wording
 
 const S = { cfg: null, scenarios: [], runs: new Map(), queue: [], streaming: false, current: null, follow: true, filter: "ALL", history: [], me: "",
@@ -230,8 +232,20 @@ const DETAIL = {
       ${kv([["PO value (pre-tax)", inr(d.po_net)], ["Approved so far", inr(d.billed_before)], ["This invoice (pre-tax)", inr(d.this_net)],
         ["Billed with this invoice", `${inr(d.cumulative)} <span class="muted">(${pct(d.pct_billed)} of the PO)</span>`],
         d.over_amount > 0 ? ["Over the PO", `<b>${inr(d.over_amount)} (${pct(d.over_pct)})</b>`] : ["Still open on the PO", inr(d.remaining_after)],
-        ["Rule", `<span class="muted">up to ${d.tolerance_pct}% over is approved; ${d.tolerance_pct}% to ${d.hold_band_pct}% goes to a person; beyond ${d.hold_band_pct}% is rejected</span>`]])}`;
+        ["Rule", `<span class="muted">up to ${d.tolerance_pct}% over is approved; ${d.tolerance_pct}% to ${d.hold_band_pct}% goes to a person; beyond ${d.hold_band_pct}% is rejected</span>`]])}
+      ${d.lines && d.lines.length ? `<div><h4>3-way match: PO, receipt and invoice (from Odoo)</h4><div class="table-wrap"><table class="three-way"><thead><tr><th>Line</th>
+        <th class="right">Ordered</th><th class="right">Received</th><th class="right">Billed before</th><th class="right">This invoice</th><th class="right">Rate (PO)</th></tr></thead><tbody>
+        ${d.lines.map(l => `<tr><td>${esc(l.line)}</td><td class="right">${l.ordered}</td><td class="right">${l.received}</td><td class="right">${l.billed_before}</td>
+          <td class="right"><b class="${l.qty_ok ? "" : "bad-text"}">${l.invoiced}</b></td>
+          <td class="right"><span class="${l.rate_ok ? "" : "bad-text"}">${l.invoice_rate != null ? inr(l.invoice_rate) : "–"}</span> <span class="muted">(${inr(l.po_rate)})</span></td></tr>`).join("")}
+        </tbody></table></div><p class="muted">What can be paid now is what was received and not billed yet. Up to ${d.tolerance_pct}% over the PO rate is fine.</p></div>` : ""}`;
   },
+
+  erp: d => d.bill_id
+    ? kv([["Draft bill", `<a href="${esc(d.url)}" target="_blank" rel="noopener">#${d.bill_id} in Odoo ↗</a>`],
+          ["Lines", `${d.lines} <span class="muted">(${d.linked} linked to the PO, so Odoo updates what's been billed)</span>`],
+          ["Status", `<span class="pill pen">Draft</span> <span class="muted">a person posts it in Odoo</span>`]])
+    : `<p><span class="pill warn">${esc(d.error || "Not posted")}</span></p>`,
 };
 
 /* ------------------------------------------------------------- run view -- */
@@ -342,7 +356,15 @@ function recheckPanels(run) {
   let out = has("NOT_AN_INVOICE") ? `<div class="resolve vendor-approve"><p>Is this actually an invoice?</p>
       <p class="sub">Checks it again as an invoice. It will be held for you to review, never approved automatically.</p>
       <div class="row"><button class="btn primary" type="button" data-treat-invoice>Yes, check it as an invoice</button></div></div>` : "";
-  if (open && has("VENDOR_UNKNOWN")) out += `<div class="resolve vendor-approve" data-role="vendor-approve"><p>Approve this vendor</p>
+  if (open && erpOn()) {                                     // Odoo is the source of truth: fix it there, then check again
+    const why = has("ERP_UNREACHABLE") || has("ERP_POST_FAILED") ? "Odoo didn't answer last time. Check again once it's back; nothing has been posted."
+      : has("VENDOR_UNKNOWN") ? `This vendor isn't in Odoo. Add it there${f.vendor_gstin ? ` with GSTIN ${esc(f.vendor_gstin)}` : ""}, then check the invoice again.`
+      : has("QTY_NOT_RECEIVED") ? "Once the rest of the goods are received in Odoo, check again: the 3-way match uses what Odoo shows as received."
+      : "After fixing it in Odoo (the vendor, the PO or the receipt), check again: every check runs against what Odoo says now.";
+    out += `<div class="resolve vendor-approve" data-role="erp-recheck"><p>Check again against Odoo</p><p class="sub">${why}</p>
+      <div class="row"><button class="btn primary" type="button" data-recheck>Check again</button></div></div>`;
+  }
+  if (open && has("VENDOR_UNKNOWN") && !erpOn()) out += `<div class="resolve vendor-approve" data-role="vendor-approve"><p>Approve this vendor</p>
       <p class="sub">Adds it to your approved list${f.vendor_gstin ? ` with GSTIN ${esc(f.vendor_gstin)}` : ""} and checks this invoice again. Later bills from it pass the vendor check on their own.</p>
       <div class="row"><input type="text" data-role="vendor-name" maxlength="200" value="${esc(f.vendor_name || "")}" aria-label="Vendor name" placeholder="Vendor name">
         <input type="text" data-role="vendor-note" maxlength="500" placeholder="How was this vendor verified? (optional)" aria-label="How was this vendor verified?"></div>
@@ -381,6 +403,7 @@ function wireVerdict(root, id, run) {
     name: $("[data-role=vendor-name]", root).value, note: $("[data-role=vendor-note]", root).value, no_po: $("[data-role=vendor-no-po]", root).checked }));
   recheck($("[data-po-use]", root), `/api/runs/${id}/po`, () => ({ po_number: $("[data-role=po-pick]", root).value }));
   recheck($("[data-po-none]", root), `/api/runs/${id}/po`, () => ({ no_po: true }));
+  recheck($("[data-recheck]", root), `/api/runs/${id}/recheck`, () => ({}));
 }
 
 /* what approving a held bill will teach the checks, mirroring the server's rules, so nobody is surprised */
@@ -538,8 +561,12 @@ class Wizard {
 
   vendorPanel(check, open) {
     if (!check) return "";
-    if (check.status === "approved") return `<p class="wz-vendor ok"><span class="tick">✓</span> On your approved vendor list as <b>${esc(check.name)}</b>.</p>`;
-    if (check.status === "blocked") return `<p class="wz-vendor bad"><b>${esc(check.name)}</b> is a blocked vendor, so this invoice will be rejected.</p>`;
+    const erp = erpOn();                                     // an Odoo account's vendors live in Odoo, so they're added there
+    if (check.status === "erp_unreachable") return `<p class="wz-vendor warn">Odoo didn't answer, so the vendor couldn't be looked up yet. The checks will hold the invoice until it does.</p>`;
+    if (check.status === "approved") return `<p class="wz-vendor ok"><span class="tick">✓</span> ${erp ? "A vendor in Odoo" : "On your approved vendor list"} as <b>${esc(check.name)}</b>.</p>`;
+    if (check.status === "blocked") return `<p class="wz-vendor bad"><b>${esc(check.name)}</b> is a blocked vendor${erp ? " (tagged Blocked in Odoo)" : ""}, so this invoice will be rejected.</p>`;
+    if (erp && (check.status === "unknown" || check.status === "no_identity"))
+      return `<p class="wz-vendor warn">This vendor isn't in Odoo. Add it there with its GSTIN; after the checks you can check the invoice again.</p>`;
     if (check.status !== "unknown" && check.status !== "no_identity") return `<p class="wz-vendor warn">The vendor doesn't cleanly match your approved list. The checks will say why.</p>`;
     if (check.status === "unknown" && ((S.runs.get(this.id) || {}).approvals || {}).vendors)
       return `<p class="wz-vendor ok"><span class="tick">✓</span> Not on your approved list yet. It will be added when the checks run, as approved on the Approvals step.</p>`;
@@ -555,6 +582,7 @@ class Wizard {
 
   /* a folder's first invoice: its vendor and PO answers are given here once for the whole folder */
   batchPanel(po) {
+    if (erpOn()) return "";                                  // with Odoo, vendors and POs are added there, not approved here
     const rest = batchOf(this.id).filter(r => r.id !== this.id && r.status === "waiting").length;
     if (!rest) return "";
     if ((S.runs.get(this.id) || {}).approvals)                // answered on the Approvals step: nothing to ask again
@@ -628,6 +656,8 @@ class Wizard {
     return `<div class="wz-stamp"><div class="stamp big ${D.cls}${this.fresh ? "" : " still"}" role="status">${D.label}</div><p class="wz-by">${by}</p>
       ${kv([["File", esc(this.filename)], ["Vendor", val(f.vendor_name)], ["Invoice number", val(f.invoice_number)], ["Invoice date", val(f.invoice_date)], ["Total", val(f.total, inr)]])}
       ${folderName(run.folder_id) ? `<p class="wz-saved">${FOLDER_ICON}<span>Saved in <b>${esc(folderName(run.folder_id))}</b>${{ approvals: " automatically, as chosen on the Approvals step", vendor: " automatically, with this vendor's earlier bills" }[this.autoFiled()] || ""}</span></p>` : ""}
+      ${(run.result || {}).erp && run.result.erp.bill_id ? `<p class="wz-saved wz-erp">${ERP_ICON}<span>Posted to Odoo as draft bill <b>#${run.result.erp.bill_id}</b>${run.result.erp.linked ? ", linked to the PO" : ""}.
+        <a href="${esc(run.result.erp.url)}" target="_blank" rel="noopener">Open in Odoo ↗</a></span></p>` : ""}
       <div data-role="batch-status">${batchStatus(batchOf(this.id))}</div>
       <div class="wz-actions center"><a class="btn" href="#dashboard">Open the dashboard</a><button class="btn primary" type="button" data-new>New document</button></div></div>`;
   }
@@ -1291,7 +1321,14 @@ function dashTab(name) {
 let LEDGER = { pos: [], vendors: [] };                     // what the PO ledger page last showed, for its two forms
 
 async function loadLedger() {
-  const { pos, vendors } = LEDGER = await api("/api/pos");
+  $$("#add-po, #add-vendor, [data-add-vendor]").forEach(b => { b.hidden = erpOn(); });   // known at sign-in: no flash while Odoo answers
+  const { pos, vendors, erp } = LEDGER = await api("/api/pos");
+  // connected to Odoo: vendors and POs are Odoo's, so they're added and changed there, and "billed" is Odoo's own count
+  $$("#add-po, #add-vendor, [data-add-vendor]").forEach(b => { b.hidden = !!erp; });
+  const src = $("#ledger-source");
+  src.hidden = !erp;
+  src.innerHTML = erp ? `${ERP_ICON}<span>Vendors and purchase orders come from <b>Odoo</b> (${esc(erp.db)}): add or change them there.
+    "Billed so far" is Odoo's own count, draft bills included; a vendor tagged <b>Blocked</b> in Odoo is blocked here.</span>` : "";
   $("#vendor-table").innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>GSTIN</th><th>Status</th><th>Source</th><th>Approval note</th><th></th></tr></thead><tbody>
     ${vendors.map(v => `<tr><td>${esc(v.vendor_id)}</td><td>${esc(v.name)}</td><td>${esc(v.gstin) || '<span class="muted">none</span>'}</td>
       <td><span class="mini ${v.status === "approved" ? "ok" : "bad"}">${esc(v.status)}</span></td><td class="muted">${esc(v.source)}</td><td>${esc(v.note)}</td>
@@ -1626,6 +1663,7 @@ async function init() {
   Object.assign(CODE_LABEL, S.cfg.labels);
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
   $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
+    + (S.cfg.erp ? `<br>Connected to <b>Odoo</b> (${esc(S.cfg.erp.db)})` : "")
     + (e.key_problem ? `<br><span class="engine-warn" title="${esc(e.key_problem)}">${/GEMINI/.test(e.key_problem) ? "Gemini key rejected: fix it to read handwriting" : "Model key can't be used"}</span>` : "");
   const { runs } = await api("/api/runs");           // survive a page reload
   runs.slice().reverse().forEach(r => S.runs.set(r.id, { id: r.id, filename: r.filename, status: r.status === "done" || r.status === "error" ? "done" : r.status,

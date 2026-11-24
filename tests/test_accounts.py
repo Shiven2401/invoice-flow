@@ -1058,7 +1058,7 @@ def test_with_approvals_the_rest_wait_then_go_through_one_at_a_time_into_the_fol
     c = client("asha")
     fid = folder(c, "November")
     decided, finish = [], pipeline._finish
-    monkeypatch.setattr(pipeline, "_finish", lambda run_id, *a: decided.append(run_id) or finish(run_id, *a))
+    monkeypatch.setattr(pipeline, "_finish", lambda run_id, *a, **kw: decided.append(run_id) or finish(run_id, *a, **kw))
     paths = nexora_folder(tmp_path, 2) + [bill(tmp_path, "Apex Stationers & Co", "08AAPFA7777Q1ZK", "AS/80", [("Files", 10, 300)])]  # no PO at all
     runs = upload_with(c, paths, vendors=True, po=True, folder_id=fid)
     assert [r["review"] for r in runs] == [True, False, False] and [r["waiting"] for r in runs] == [False, True, True]
@@ -1176,7 +1176,7 @@ def test_a_zip_is_unpacked_into_its_invoices_and_checked_one_at_a_time(tmp_path,
     z = zip_of(tmp_path, {"nov/NX_10.pdf": bills[2], "nov/NX_2.pdf": bills[1], "NX_1.pdf": bills[0], "__MACOSX/nov/._NX_2.pdf": b"junk",
                           ".DS_Store": b"junk", "readme.txt": b"hello", "inner.zip": b"PK not unpacked"})
     decided, finish = [], pipeline._finish
-    monkeypatch.setattr(pipeline, "_finish", lambda run_id, *a: decided.append(run_id) or finish(run_id, *a))
+    monkeypatch.setattr(pipeline, "_finish", lambda run_id, *a, **kw: decided.append(run_id) or finish(run_id, *a, **kw))
     runs = upload_with(c, [z], vendors=True, po=True, folder_id=None)
     assert [r["filename"] for r in runs] == ["NX_2.pdf", "NX_10.pdf", "NX_1.pdf"]  # path order, numbers natural (2 before 10), junk skipped
     assert len({r["batch"] for r in runs}) == 1 and [r["waiting"] for r in runs] == [False, True, True]

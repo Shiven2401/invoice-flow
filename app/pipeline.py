@@ -1,10 +1,14 @@
-"""The invoice pipeline: 9 visible stages from raw file to explained decision.
+"""The invoice pipeline: visible stages from raw file to explained decision.
 
-    ingest -> read -> extract -> validate -> vendor -> po -> duplicates -> budget -> decision
+    ingest -> read -> extract -> validate -> vendor -> po -> duplicates -> budget -> decision [-> erp]
 
 `run()` calls emit(stage, status, title, summary, detail) as each stage starts and
 finishes - that is what the live run view renders. A stage can finish ok / warn /
 fail, or be skipped (with a reason) when an earlier finding makes it pointless.
+
+For an account connected to Odoo (odoo.serves), vendors and POs come from Odoo, the budget stage adds the 3-way match
+(PO, receipt, invoice) on each line, and an approved invoice gets a 10th stage: a draft vendor bill in Odoo, linked
+to the PO lines. If Odoo can't be reached the invoice is held ("ERP unreachable, retry"), never approved unchecked.
 """
 import json
 import time
@@ -13,7 +17,7 @@ from pathlib import Path
 import pymupdf
 from loguru import logger
 
-from . import config, db, extract, rules
+from . import config, db, extract, odoo, rules
 from .rules import inr
 
 STAGES = [
@@ -26,6 +30,7 @@ STAGES = [
     ("duplicates", "Duplicate check"),
     ("budget", "PO balance & tolerance"),
     ("decision", "Decision"),
+    ("erp", "Post to ERP"),
 ]
 TITLES = dict(STAGES)
 
@@ -85,9 +90,12 @@ def _end_extract(end, f, meta, input_fs, run_id):
     # whether the vendor is already approved, so the Review page can offer to approve a new one before the checks,
     # and whether the PO it cites is in the register, so a folder's first invoice can settle the PO question for all
     owner = db.run_owner(run_id)
-    vres, _ = rules.match_vendor(f, rules.load_vendors(owner))
     ref = extract.norm_alnum(f.get("po_reference"))
-    po_check = dict(reference=f.get("po_reference"), known=bool(ref) and any(extract.norm_alnum(p["po_number"]) == ref for p in rules.load_pos(owner)))
+    try:
+        vres, _ = rules.match_vendor(f, rules.load_vendors(owner))
+        po_check = dict(reference=f.get("po_reference"), known=bool(ref) and any(extract.norm_alnum(p["po_number"]) == ref for p in rules.load_pos(owner)))
+    except odoo.OdooError:  # Odoo didn't answer: the Review page just can't say yet; the checks will hold the invoice
+        vres, po_check = dict(status="erp_unreachable", vendor=None), dict(reference=f.get("po_reference"), known=False)
     end("extract", [rules.F("EXTRACT_NOTE", "warn", "extract", n) for n in meta["notes"] if "fell back" in n or "cannot extract" in n] + input_fs,
         f"{meta['used']} - {len(found)} key fields found, {len(f.get('line_items', []))} line items",
         dict(extractor=meta["used"], fields=_public_fields(f), line_items=f.get("line_items", []),
@@ -171,16 +179,52 @@ def resume(run_id, filename, emit, inputs):
         return _failed(run_id, t0, emit, findings, filename, e)
 
 
+def _slim(po_line):
+    """What a bill line needs from a PO line (kept with the result, so a person's approval can post the same bill)."""
+    return {k: po_line.get(k) for k in ("id", "name", "product_id", "tax_ids")}
+
+
+def bill_plan(v, f, d, pairs, unpaired):
+    """The draft bill an approval would create in Odoo: lines linked to the PO lines they bill, plus any invoice line
+    that isn't on the PO; for a vendor that bills without a PO, the invoice's own lines. None if there's nothing to post."""
+    if not v or not v.get("odoo_id"):
+        return None
+    if pairs is not None:
+        lines = [dict(po_line=_slim(p["po_line"]), quantity=p["qty"], price_unit=p["rate"]) for p in pairs]
+        lines += [dict(name=li.get("description") or "Invoice line", quantity=float(li.get("quantity") or 1),
+                       price_unit=float(li.get("unit_price") or li.get("amount") or 0)) for li in unpaired]
+    else:
+        lines = [dict(name=li.get("description") or "Invoice line", quantity=float(li.get("quantity") or 1),
+                      price_unit=float(li.get("unit_price") or (li.get("amount") or 0) / float(li.get("quantity") or 1)))
+                 for li in f.get("line_items") or [] if li.get("amount") or li.get("unit_price")]
+        if not lines and d.get("net") is not None:
+            lines = [dict(name=f"Invoice {f.get('invoice_number') or ''}".strip(), quantity=1.0, price_unit=d["net"])]
+    return dict(partner_id=v["odoo_id"], vendor=v["name"], lines=lines) if lines else None
+
+
+def post_bill(f, plan):
+    """Create the draft bill. Returns {bill_id, url}; raises odoo.OdooError."""
+    bill_id = odoo.create_draft_bill(plan["partner_id"], f.get("invoice_number"), f.get("invoice_date"), plan["lines"])
+    return dict(bill_id=bill_id, url=odoo.bill_url(bill_id), lines=len(plan["lines"]),
+                linked=sum(1 for ln in plan["lines"] if ln.get("po_line")), system="Odoo")
+
+
 def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
     """Stages 4 to 9: validate, vendor, PO, duplicates, budget, then the decision."""
     start, end, skip = _stages(emit, findings)
     doc = dict(method=method)
     user_id = db.run_owner(run_id)  # vendors, duplicates and PO billing are all judged within this account
     billed = lambda po_number: db.billed(po_number, user_id)
+    erp = rules.uses_odoo(user_id)  # connected to Odoo: vendors, POs, receipts and billing come from there
     try:
         # 4 --------------------------------------------------------- validate
         start("validate")
-        vendors, pos = rules.load_vendors(user_id), rules.load_pos(user_id)
+        try:
+            vendors, pos, erp_down = rules.load_vendors(user_id), rules.load_pos(user_id), None
+        except odoo.OdooError as e:
+            vendors, pos, erp_down = [], [], e
+        if erp:  # what Odoo says is billed so far (its own count, draft bills included), not the local ledger
+            billed = lambda po_number: next((p["billed"] for p in pos if p["po_number"] == po_number), 0.0)
         guess = next((p for p in pos if f.get("po_reference") and p["po_number"] == f["po_reference"]), None)
         d = rules.derive_amounts(f, assumed_rate=guess["gst_rate"] if guess else None)
         checks, vfs = rules.validate(f, d)
@@ -192,12 +236,20 @@ def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
             for sid in ("vendor", "po", "duplicates", "budget"):
                 skip(sid, "not a payable invoice - nothing further to check")
             return _finish(run_id, t0, emit, findings, f, meta, doc, d, {}, None, None, None, checks, [], filename)
+        if erp_down:  # never decide without the ERP: hold, and say so
+            start("vendor")
+            end("vendor", [rules.F("ERP_UNREACHABLE", "hold", "vendor", f"ERP unreachable, retry: {erp_down}. Nothing was checked against Odoo or posted to it.")],
+                "Odoo didn't answer", dict(status="erp_unreachable", vendor=None, method=None, name_score=0, gstin_on_invoice=f.get("vendor_gstin"),
+                                           gstin_valid=False, candidates=[]))
+            for sid in ("po", "duplicates", "budget"):
+                skip(sid, "Odoo didn't answer - these run when the invoice is checked again")
+            return _finish(run_id, t0, emit, findings, f, meta, doc, d, {}, None, None, None, checks, [], filename)
 
         # 5 ------------------------------------------------------- vendor
         start("vendor")
         vres, vfs = rules.match_vendor(f, vendors)
         batch = f.get("_batch") or {}
-        if batch.get("all_vendors") and any(x["code"] == "VENDOR_UNKNOWN" for x in vfs):
+        if batch.get("all_vendors") and not erp and any(x["code"] == "VENDOR_UNKNOWN" for x in vfs):  # Odoo's vendors are added in Odoo
             # "approve all the new vendors" was ticked for this folder. Only a new identity qualifies: a lookalike of a
             # vendor on file, or of a blocked one, is still held (vendor_approval_problem), as is any GSTIN disagreement
             name, gstin = (f.get("vendor_name") or "").strip()[:200], (f.get("vendor_gstin") or "").strip().upper()
@@ -253,22 +305,43 @@ def _check(run_id, t0, emit, findings, f, meta, method, fhash, filename):
         start("duplicates")
         priors = db.prior_submissions(run_id, user_id)
         dres, dfs = rules.duplicate_check(f, v, fhash, priors, db.prior_by_hash(fhash, run_id, user_id))
+        if erp and v and f.get("invoice_number") and not any(x["code"] == "DUPLICATE_EXACT" for x in dfs):
+            try:  # Odoo's own record: a bill entered there by hand, or posted from another account, counts too
+                if odoo.bill_exists(v["odoo_id"], f["invoice_number"]):
+                    dres["matches"].append(dict(run_id="Odoo", filename="a vendor bill in Odoo", reason="Odoo already has a bill with this number from this vendor"))
+                    dfs.append(rules.F("DUPLICATE_EXACT", "reject", "duplicates",
+                                       f"Odoo already has a vendor bill {f['invoice_number']} from {v['name']} - paying this one would double-pay."))
+            except odoo.OdooError as e:
+                dfs.append(rules.F("ERP_UNREACHABLE", "hold", "duplicates", f"ERP unreachable, retry: Odoo couldn't be asked whether this bill already exists ({e})."))
         end("duplicates", dfs,
             (f"{len(dres['matches'])} earlier match(es): " + dres["matches"][0]["reason"]) if dres["matches"]
             else f"no duplicate among {dres['checked_against']} earlier submission(s)", dres)
 
         # 8 --------------------------------------------------------- budget
         start("budget")
-        bres = None
+        bres, pairs, unpaired = None, None, []
         if any(x["code"] == "DUPLICATE_EXACT" for x in findings):
             skip("budget", "exact duplicate - its value is already counted on the PO, so it is not added again")
         elif po and d["net"] is not None and pres["status"] != "vendor_mismatch":
             bres, bfs = rules.budget_check(po, d["net"], billed(po["po_number"]), d["rate"])
-            end("budget", bfs, f"cumulative {inr(bres['cumulative'])} vs PO {inr(bres['po_net'])} ({bres['pct_billed']:g}% billed)", bres)
+            summary = f"cumulative {inr(bres['cumulative'])} vs PO {inr(bres['po_net'])} ({bres['pct_billed']:g}% billed)"
+            if erp and po.get("lines"):  # the 3-way match: each invoice line against its PO line and what was received
+                pairs, lfs = rules.pair_lines(f, d, po)
+                unpaired = [x["item"] for x in lfs if x["code"] == "LINE_NOT_ON_PO" and x.get("item")]
+                bres["lines"] = []
+                for p in pairs:
+                    res3, fs3 = rules.three_way_check(p["po_line"], p["qty"], p["rate"])
+                    bres["lines"].append(res3)
+                    lfs += fs3
+                bfs = bfs + lfs
+                ok = sum(1 for r in bres["lines"] if r["qty_ok"] and r["rate_ok"])
+                summary += f"; 3-way: {ok} of {len(bres['lines'])} line{'s' if len(bres['lines']) != 1 else ''} match the PO and the receipt"
+            end("budget", bfs, summary, bres)
         else:
             skip("budget", "no PO matched - nothing to reconcile against")
 
-        return _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres, checks, [], filename)
+        plan = bill_plan(v, f, d, pairs, unpaired) if erp else None
+        return _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres, checks, [], filename, erp=erp, plan=plan)
     except Exception as e:
         return _failed(run_id, t0, emit, findings, filename, e)
 
@@ -308,12 +381,24 @@ def file_with_vendor(run_id, vendor_id):
     return folder
 
 
-def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres, checks, _unused, filename):
+def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres, checks, _unused, filename, erp=False, plan=None):
     sid = "decision"
     emit(sid, "running", TITLES[sid], "", {})
     if config.STAGE_DELAY:
         time.sleep(config.STAGE_DELAY)
     decision = rules.decide(findings)
+    bill = None
+    if erp and decision == "APPROVE":  # 10. post to the ERP: a draft vendor bill in Odoo; a person still posts it there
+        emit("erp", "running", TITLES["erp"], "", {})
+        try:
+            if not plan:
+                raise odoo.OdooError("there were no lines to put on the bill")
+            bill = post_bill(f, plan)
+            emit("erp", "ok", TITLES["erp"], f"Draft bill #{bill['bill_id']} created in Odoo, {bill['linked']} of {bill['lines']} line(s) linked to the PO", bill)
+        except odoo.OdooError as e:
+            findings.append(rules.F("ERP_POST_FAILED", "hold", "erp", f"Every check passed, but Odoo didn't take the draft bill ({e}). Nothing was posted; check again."))
+            emit("erp", "warn", TITLES["erp"], "Odoo didn't take the bill - held", dict(error=str(e)))
+            decision = rules.decide(findings)
     ex = rules.explain(decision, findings, f, d, pres, bres)
     vendor = (vres or {}).get("vendor")
     msg = rules.draft_message(decision, f, vendor, findings)
@@ -326,6 +411,8 @@ def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres,
         vendor=dict(vendor_id=vendor["vendor_id"], name=vendor["name"], status=vres["status"]) if vendor else None,
         po=dict(po_number=po["po_number"], description=po["description"], match=pres["status"]) if po else None,
         budget=bres, checks=checks, extractor=meta["used"], read_method=doc["method"])
+    if erp:  # the bill (if one was created), and what a person's approval would post if it was held
+        result.update(erp=bill, erp_plan=plan)
     ms = int((time.time() - t0) * 1000)
     # record on the PO ledger only when approved: the NEXT invoice is judged on cumulative billing
     if decision == "APPROVE" and po and bres:
@@ -340,7 +427,8 @@ def _finish(run_id, t0, emit, findings, f, meta, doc, d, vres, pres, dres, bres,
     db.update_run(run_id, status="done", decision=decision, vendor_name=f.get("vendor_name"), vendor_id=vendor["vendor_id"] if vendor else None,
                   invoice_number=f.get("invoice_number"), invoice_date=f.get("invoice_date"), po_number=po["po_number"] if po else None,
                   net=d.get("net") if d else None, total=f.get("total"), extractor=meta["used"], duration_ms=ms,
-                  result_json=json.dumps(result), **({"folder_id": None} if decision == "REJECT" else {}))  # a re-check can reject a filed invoice
+                  result_json=json.dumps(result), odoo_bill_id=(bill or {}).get("bill_id"),
+                  **({"folder_id": None} if decision == "REJECT" else {}))  # a re-check can reject a filed invoice
     logger.info("{} in {} ms {}", decision, ms, sorted({x["code"] for x in findings if x["severity"] in ("hold", "reject")}))
     sym ={"APPROVE": "ok", "HOLD": "warn", "REJECT": "fail"}[decision]
     emit(sid, sym, TITLES[sid], {"APPROVE": "Approved for payment", "HOLD": "Held for review", "REJECT": "Rejected"}[decision], dict(decision=decision, headline=ex["headline"], next_steps=ex["next_steps"], duration_ms=ms))

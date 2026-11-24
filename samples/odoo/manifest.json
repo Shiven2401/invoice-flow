@@ -1,0 +1,52 @@
+[
+  {
+    "order": 1,
+    "file": "odoo_1_all_match.pdf",
+    "title": "Odoo 1 - everything matches",
+    "scenario": "Deccan Poultry Farms bills PO A: 50 kg at Rs 180, all 50 kg received. Approved, and posted to Odoo as a draft bill linked to PO A.",
+    "expected": "APPROVE",
+    "codes": [
+      "THREE_WAY_OK"
+    ]
+  },
+  {
+    "order": 2,
+    "file": "odoo_2_billed_above_received.pdf",
+    "title": "Odoo 2 - billed more than received",
+    "scenario": "Godavari Fresh Fish bills 40 kg of prawns on PO B, but only 30 kg have been received. Held until the rest arrives.",
+    "expected": "HOLD",
+    "codes": [
+      "QTY_NOT_RECEIVED"
+    ]
+  },
+  {
+    "order": 3,
+    "file": "odoo_3_rate_mismatch.pdf",
+    "title": "Odoo 3 - rate 16% above the PO",
+    "scenario": "Godavari Fresh Fish bills 20 kg of rohu on PO C at Rs 220 against Rs 190 on the PO: beyond the 10% band, so rejected.",
+    "expected": "REJECT",
+    "codes": [
+      "RATE_OVER_PO"
+    ]
+  },
+  {
+    "order": 4,
+    "file": "odoo_4_duplicate.pdf",
+    "title": "Odoo 4 - the same invoice again",
+    "scenario": "Case 1 sent again as a reminder. Rejected as a duplicate, by Invoice Flow and by Odoo, which already has bill DPF-2001.",
+    "expected": "REJECT",
+    "codes": [
+      "DUPLICATE_EXACT"
+    ]
+  },
+  {
+    "order": 5,
+    "file": "odoo_5_no_po.pdf",
+    "title": "Odoo 5 - PO not in Odoo",
+    "scenario": "Deccan Poultry Farms cites PO P00099, which doesn't exist in Odoo. Held until the right PO is given.",
+    "expected": "HOLD",
+    "codes": [
+      "PO_NOT_FOUND"
+    ]
+  }
+]
