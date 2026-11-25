@@ -1709,3 +1709,16 @@ button.erp-tile:hover, button.erp-tile:focus-visible { border-color: var(--lav);
 .activity-table code { font-size: 12px; }
 .activity-table .activity-reason { min-width: 220px; max-width: 420px; white-space: normal; }
 .activity-table tr.this-session td:first-child { box-shadow: inset 3px 0 0 var(--lav); }
+/* Platform page (static/admin.js): administrators only */
+#view-admin .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; margin: 12px 0; }
+#view-admin .kv > div, .adm-modal .kv > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.adm-modal .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; margin: 12px 0; }
+.adm-modal .kv span { color: var(--ink-2); font-size: 12px; }
+.adm-modal { padding: 22px 26px; } .adm-modal h3 { margin: 18px 0 6px; font-size: 15px; }
+.adm-modal ul { margin: 0; padding-left: 18px; }
+.adm-modal .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button.link { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+button.link:hover, button.link:focus-visible { text-decoration: underline; }
+.adm-folders { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.adm-folders > li { padding: 10px 12px; border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 12px; }
+.adm-folders ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }

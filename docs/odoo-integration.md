@@ -44,6 +44,43 @@ or pays.
   After connecting (`ODOO_ACCOUNTS`), "Send the vendors to Odoo" and "Make the bills for old invoices" (the backfill)
   each need an approver and a confirmation (`POST /api/erp/sync-vendors`, `POST /api/erp/backfill` with `{"confirm": true}`).
 
+## The whole platform in Odoo, for the administrator (app/central_sync.py)
+
+Every account works on its own in Invoice Flow and sees only its own data. The platform administrator (an account in
+`ADMIN_ACCOUNTS`) also sees all of it, twice: on Invoice Flow's **Platform** page, and in Odoo under the **Invoice Flow
+Platform** menu, without signing in as anyone else.
+
+**Who decides what.** Invoice Flow stays the source of truth for accounts, sign-in, ownership of invoices and folders,
+and who may see what. Odoo holds a read-only copy for the administrator; nothing is read back from it to decide access.
+
+| In Odoo (custom models, `app/central_schema.py`) | What it holds |
+|---|---|
+| Users (`x_if_user`) | every account: username, email (Google accounts), role, registered, last login, connected to Odoo; counts of invoices, folders, POs, pending, failed, approved, rejected, value (Odoo counts them) |
+| Folders (`x_if_folder`) | every account's folders, with their owner and invoices |
+| Invoices (`x_if_invoice`) | every invoice, whatever its state (processing, waiting for review, failed, held, approved, rejected): owner (user id, username, email), folder, the original document, extracted fields, checks and matching result, decision and who made it, PO, vendor, the Odoo bill and payment status when the account is connected, last sync |
+| Purchase orders (`x_if_po`) | the shared register, each account's own register, and the Odoo POs accounts raised in the app (linked) |
+| Vendors (`x_if_vendor`) | the shared master list and each account's approved vendors, linked to the Odoo vendor when there is one |
+| Activity (`x_if_activity`) | the activity log of every account: one row per invoice per login session |
+| Dashboard (`x_if_platform`) | one record: users, invoices, procurement, money, processing and sync, counted by Odoo from the records above and its own bills and POs each time it opens |
+
+- **No accounting entries.** Invoices of accounts not connected to Odoo are only these records; bills are made only for
+  connected accounts, as before.
+- **Access.** Only the Odoo group **Invoice Flow Platform Admin** can use these models and menus (Odoo 20's `ir.access`;
+  any other permission on them is switched off). The API user and the people in `ODOO_PLATFORM_USERS` are in it. The
+  views are read-only: the app would overwrite an edit.
+- **Kept in step** by a reconciler: each round builds every record from the database, fingerprints it and sends only
+  what changed (table `central_sync`). Any change in the app wakes it within seconds; otherwise it checks everything
+  every 5 minutes. Every Odoo record carries its key (`x_key`, `<site>:<kind>:<id>`) and is found by it before anything is
+  created, so a retry never makes a second record. Odoo down or rate-limiting: the round waits and retries (15 s,
+  doubling, at most 15 min); a record Odoo refuses waits on its own. A folder move is sent as a change of the invoice's
+  folder; an invoice deleted in the app is archived in Odoo ("Deleted in Invoice Flow"), never deleted.
+- **In Invoice Flow:** the Platform page (overview, users, invoices with filters for user, folder, approval, processing,
+  payment, matching, invoice and upload dates, vendor, PO and search, folders as a tree, POs, vendors, activity with CSV,
+  sync state, and the access log) and `/api/admin/*`. Opening another person's invoice or document is recorded in the
+  access log (`admin_audit`).
+- **Setup:** `python tools/odoo_central_setup.py plan|apply|check [.env]` creates the group, models, fields, access,
+  views, dashboard, actions and menus (idempotent, never deletes). Then set `CENTRAL_SYNC=1` and `ADMIN_ACCOUNTS`.
+
 ## How the sync works (app/erp_sync.py)
 
 - **Mirror.** One table (`erp_records`) holds Odoo's POs (with lines), vendors, products (with stock), receipts (with
@@ -111,6 +148,10 @@ account when it's not set).
 | `ODOO_ACCOUNTS` | the Invoice Flow accounts connected to Odoo, comma-separated (always set it on a public server) |
 | `ODOO_APPROVERS` | the accounts allowed to create, change or approve POs and add vendors or products; empty = every connected account |
 | `ODOO_PREVIEW_ACCOUNTS` | accounts not connected yet that may see the read-only Sync preview (nothing is written for them) |
+| `ADMIN_ACCOUNTS` | platform administrators: the Platform page and `/api/admin/*` (every account's data); everyone else gets 403 |
+| `CENTRAL_SYNC` | `1` keeps the whole platform's read-only copy in Odoo (menu Invoice Flow Platform) |
+| `CENTRAL_SITE` | this server's name in the Odoo keys (default: SITE_URL's host, else `local`), so a test server never overwrites live records |
+| `ODOO_PLATFORM_USERS` | for `tools/odoo_central_setup.py`: Odoo logins put in the Invoice Flow Platform Admin group |
 
 Live (a Compute Engine VM behind Cloud Run): URL, database, user, protocol, accounts and approvers come from the VM's
 metadata; the API key comes from **Secret Manager** (secret `odoo-api-key`, read at boot with the VM's service account,

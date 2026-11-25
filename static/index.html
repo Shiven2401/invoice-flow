@@ -33,6 +33,7 @@
     <a href="#process" data-tab="process" title="Process"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1-1.5z"/><path d="M9.5 12h5M9.5 15.5h5M9.5 8.5h2"/></svg><span>Process</span></a>
     <a href="#ledger" data-tab="ledger" title="PO ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/></svg><span>PO ledger</span></a>
     <a href="#erp" data-tab="erp" title="Odoo ERP" data-erp-nav hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/></svg><span>Odoo ERP</span></a>
+    <a href="#admin" data-tab="admin" title="Platform (all accounts)" data-admin-nav hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.3"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5M14.5 14.6c.8-.4 1.6-.6 2.5-.6 2.1 0 3.7 1.3 4.2 4"/></svg><span>Platform</span></a>
     <a href="#rules" data-tab="rules" title="Rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h4M12 7h8M4 12h9M17 12h3M4 17h2M10 17h10"/><circle cx="10" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Rules</span></a>
   </nav>
   <div class="side-folders" id="side-folders">
@@ -74,6 +75,7 @@
   <a href="#dashboard" data-tab="dashboard">Dashboard</a>
   <a href="#ledger" data-tab="ledger">PO ledger</a>
   <a href="#erp" data-tab="erp" data-erp-nav hidden>ERP</a>
+  <a href="#admin" data-tab="admin" data-admin-nav hidden>Platform</a>
   <a href="#rules" data-tab="rules">Rules</a>
 </nav>
 
@@ -303,6 +305,14 @@
     <div id="erp-body"></div>
   </section>
   <!-- ============================= RULES ============================= -->
+  <!-- platform administrators only (ADMIN_ACCOUNTS): every account's data, as in Odoo's Invoice Flow Platform menu (static/admin.js) -->
+  <section id="view-admin" class="view page" hidden>
+    <div class="page-head"><div><h1>Platform</h1><p class="page-sub" id="admin-sub"></p></div></div>
+    <div class="dash-tabs erp-tabs" role="tablist" aria-label="Platform views" id="admin-tabs"></div>
+    <div class="erp-filters" id="admin-filters" role="group" aria-label="Filters" hidden></div>
+    <div id="admin-body"></div>
+  </section>
+
   <section id="view-rules" class="view page" hidden>
     <h1>How decisions are made</h1>
     <div id="rules"></div>
@@ -312,6 +322,7 @@
 <dialog class="modal" id="folder-dialog" aria-label="Folders"></dialog>
 <dialog class="modal ledger-modal" id="ledger-dialog" aria-label="Add to the PO ledger"></dialog>
 <dialog class="modal ledger-modal erp-modal" id="erp-dialog" aria-label="Odoo ERP"></dialog>
+<dialog class="modal ledger-modal erp-modal adm-modal" id="admin-dialog" aria-label="Invoice"></dialog>
 <div class="toast" id="toast" role="status" hidden><span></span><button type="button">Undo</button></div>
 
 <aside class="drawer" id="drawer" hidden aria-label="Run detail">
@@ -327,6 +338,7 @@
 
 <script src="/static/app.js"></script>
 <script src="/static/erp.js"></script>
+<script src="/static/admin.js"></script>
 <script src="/static/guide.js"></script>
 </body>
 </html>

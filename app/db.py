@@ -18,6 +18,9 @@ from . import config
 
 _lock = threading.RLock()
 _conn = None
+# set whenever something the platform view shows changes (a user, invoice, folder, PO, vendor, activity row): the
+# central sync (central_sync.py) wakes on it and sends what changed to Odoo
+CHANGED = threading.Event()
 
 
 def conn():
@@ -85,6 +88,13 @@ def init(c):
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT, session_id TEXT, run_id TEXT, filename TEXT,
         invoice_number TEXT, vendor TEXT, decision TEXT, decided_by TEXT, reason TEXT, uploaded_at TEXT, decided_at TEXT,
         odoo_bill_id INTEGER, sync_status TEXT, UNIQUE(session_id, run_id));
+    -- the central (platform-wide) copy in Odoo: per record of each kind, its Odoo id and a fingerprint of what was sent
+    CREATE TABLE IF NOT EXISTS central_sync(
+        kind TEXT, local_id TEXT, odoo_id INTEGER, hash TEXT, doc_hash TEXT, status TEXT, error TEXT, attempts INTEGER DEFAULT 0,
+        next_try REAL DEFAULT 0, synced_at TEXT, PRIMARY KEY(kind, local_id));
+    -- what a platform administrator opened of other people's data (who, what, when): access to it is itself audited
+    CREATE TABLE IF NOT EXISTS admin_audit(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, admin TEXT, action TEXT, target TEXT, owner TEXT);
     """)
     # databases made by earlier versions
     run_cols = {r[1] for r in c.execute("PRAGMA table_info(runs)")}
@@ -106,8 +116,11 @@ def init(c):
         c.execute("ALTER TABLE runs ADD COLUMN odoo_status TEXT")
     if "odoo_trail" not in run_cols:  # every record this invoice left in Odoo (JSON list); kept across re-checks
         c.execute("ALTER TABLE runs ADD COLUMN odoo_trail TEXT")
-    if "odoo_partner_id" not in {r[1] for r in c.execute("PRAGMA table_info(users)")}:  # the account's contact in Odoo
+    user_cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
+    if "odoo_partner_id" not in user_cols:  # the account's contact in Odoo
         c.execute("ALTER TABLE users ADD COLUMN odoo_partner_id INTEGER")
+    if "last_login_at" not in user_cols:    # for the platform view's "active users"
+        c.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT")
     for col in ("upload_session", "decided_at", "decided_session"):  # the activity log: which session uploaded and decided it
         if col not in run_cols:
             c.execute(f"ALTER TABLE runs ADD COLUMN {col} TEXT")
@@ -338,6 +351,7 @@ def add_session(token_hash, user_id, expires_at, now_ts, session_id=None):
         conn().execute("DELETE FROM sessions WHERE expires_at<?", (now_ts,))
         conn().execute("INSERT INTO sessions(token_hash,user_id,expires_at,session_id,started_at) VALUES(?,?,?,?,?)",
                        (token_hash, user_id, expires_at, session_id, now()))
+        conn().execute("UPDATE users SET last_login_at=? WHERE id=?", (now(), user_id))
         conn().commit()
 
 
@@ -774,6 +788,129 @@ def reset(user_id):
             conn().execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
         conn().commit()
     return [(r["id"], r["file_path"]) for r in rows]
+
+
+# ------------------------------------------------- the whole platform (administrators and the central sync only) --
+# Everything above is filtered by one account's user_id. These read across accounts: only the platform view
+# (admin_api.py, which checks ADMIN_ACCOUNTS) and the central sync to Odoo (central_sync.py) call them.
+
+def all_users():
+    with _lock:
+        rows = conn().execute("SELECT id,username,created_at,pw_hash,odoo_partner_id,last_login_at FROM users ORDER BY id").fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["login_method"] = "Google" if (d.pop("pw_hash") or "").startswith("sso$google$") else "Password"
+        out.append(d)
+    return out
+
+
+def all_folders():
+    with _lock:
+        rows = conn().execute("SELECT f.id,f.user_id,f.name,f.created_at,COUNT(r.id) AS count FROM folders f "
+                              "LEFT JOIN runs r ON r.folder_id=f.id AND r.user_id=f.user_id GROUP BY f.id ORDER BY f.user_id, f.name COLLATE NOCASE").fetchall()
+    return [dict(r) for r in rows]
+
+
+RUN_COLS = ("id,created_at,filename,file_hash,file_path,status,decision,final_decision,override_note,vendor_name,vendor_id,invoice_number,"
+            "invoice_date,po_number,net,total,extractor,duration_ms,result_json,inputs_json,user_id,folder_id,batch_id,odoo_bill_id,odoo_status,"
+            "upload_session,decided_at,decided_session")
+
+
+def all_runs(run_id=None):
+    with _lock:
+        if run_id:
+            r = conn().execute(f"SELECT {RUN_COLS} FROM runs WHERE id=?", (run_id,)).fetchone()
+            return dict(r) if r else None
+        rows = conn().execute(f"SELECT {RUN_COLS} FROM runs ORDER BY created_at DESC, rowid DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def all_added_pos():
+    with _lock:
+        rows = conn().execute("SELECT * FROM purchase_orders ORDER BY user_id, created_at").fetchall()
+    return [dict(r) for r in rows]
+
+
+def all_added_vendors():
+    with _lock:
+        rows = conn().execute("SELECT * FROM vendors ORDER BY user_id, approved_at").fetchall()
+    return [dict(r) for r in rows]
+
+
+def all_vendor_links():
+    with _lock:
+        rows = conn().execute("SELECT * FROM vendor_odoo").fetchall()
+    return {(r["user_id"], r["vendor_id"]): dict(r) for r in rows}
+
+
+def all_billed():
+    """{(user_id, po_number): net billed} from the ledger, every account."""
+    with _lock:
+        rows = conn().execute("SELECT user_id, po_number, SUM(net_amount) AS net FROM ledger GROUP BY user_id, po_number").fetchall()
+    return {(r["user_id"], r["po_number"]): float(r["net"] or 0) for r in rows}
+
+
+def all_activity(limit=20000):
+    with _lock:
+        rows = conn().execute("SELECT * FROM activity ORDER BY COALESCE(decided_at, uploaded_at) DESC, id DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def erp_created_by_app(model):
+    """Mirror rows of records made through Invoice Flow (they have created_by), e.g. the POs accounts raised in Odoo."""
+    with _lock:
+        rows = conn().execute("SELECT * FROM erp_records WHERE model=? AND created_by IS NOT NULL", (model,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def central_rows(kind):
+    with _lock:
+        rows = conn().execute("SELECT * FROM central_sync WHERE kind=?", (kind,)).fetchall()
+    return {r["local_id"]: dict(r) for r in rows}
+
+
+def central_all():
+    with _lock:
+        rows = conn().execute("SELECT * FROM central_sync").fetchall()
+    return [dict(r) for r in rows]
+
+
+def central_set(kind, local_id, **fields):
+    with _lock:
+        c = conn()
+        c.execute("INSERT OR IGNORE INTO central_sync(kind, local_id) VALUES(?,?)", (kind, local_id))
+        if fields:
+            c.execute(f"UPDATE central_sync SET {', '.join(f'{k}=?' for k in fields)} WHERE kind=? AND local_id=?", (*fields.values(), kind, local_id))
+        c.commit()
+
+
+def audit(admin, action, target, owner=None):
+    with _lock:
+        conn().execute("INSERT INTO admin_audit(at,admin,action,target,owner) VALUES(?,?,?,?,?)", (now(), admin, action, target, owner))
+        conn().commit()
+
+
+def audit_rows(limit=2000):
+    with _lock:
+        rows = conn().execute("SELECT * FROM admin_audit ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _notify(fn):
+    """Wrap a function that changes what the platform view shows, so the central sync wakes after it."""
+    def wrapped(*a, **kw):
+        out = fn(*a, **kw)
+        CHANGED.set()
+        return out
+    wrapped.__name__, wrapped.__doc__, wrapped.__wrapped__ = fn.__name__, fn.__doc__, fn
+    return wrapped
+
+
+for _name in ("create_user", "add_session", "create_run", "update_run", "delete_run", "purge_hidden", "fail_interrupted", "add_ledger",
+              "remove_ledger", "add_po", "remove_po", "add_vendor", "remove_vendor", "add_alias", "set_vendor_link", "log_activity",
+              "activity_for_run", "create_folder", "reset_folder", "reset"):
+    globals()[_name] = _notify(globals()[_name])
 
 
 def close():

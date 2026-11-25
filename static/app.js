@@ -1585,7 +1585,7 @@ function closeLightbox() {
 /* ------------------------------------------------------------------ routing -- */
 function route() {
   const tab = (location.hash || "#process").slice(1);
-  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) || (tab === "erp" && (erpOn() || (S.cfg && S.cfg.erp_preview))) ? tab : "process";
+  const name = ["process", "dashboard", "ledger", "rules"].includes(tab) || (tab === "erp" && (erpOn() || (S.cfg && S.cfg.erp_preview))) || (tab === "admin" && S.cfg && S.cfg.admin) ? tab : "process";
   $$(".view").forEach(v => v.hidden = v.id !== `view-${name}`);
   $$(".tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.tab === name));
   $$(".tabs a").forEach(a => a.dataset.tab === name ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
@@ -1595,7 +1595,7 @@ function route() {
 function refreshVisible() {
   const tab = (location.hash || "#process").slice(1);
   if (tab === "dashboard") loadDashboard(); else if (tab === "ledger") loadLedger(); else if (tab === "rules") loadRules();
-  else if (tab === "erp" && (erpOn() || S.cfg.erp_preview)) loadErp();
+  else if (tab === "erp" && (erpOn() || S.cfg.erp_preview)) loadErp(); else if (tab === "admin" && S.cfg.admin) loadAdmin();
 }
 
 /* ------------------------------------------------------------ sort and filter sheet -- */
@@ -1747,7 +1747,7 @@ async function init() {
   [S.cfg, { samples: S.scenarios }] = await Promise.all([api("/api/config"), api("/api/samples")]);
   Object.assign(CODE_LABEL, S.cfg.labels);
   $$("[data-erp-nav]").forEach(a => { a.hidden = !(S.cfg.erp || S.cfg.erp_preview); });   // the Odoo ERP page (before connecting: its preview)
-  if (S.cfg.erp || S.cfg.erp_preview) wireErp();
+  if (S.cfg.erp || S.cfg.erp_preview) wireErp(); $$("[data-admin-nav]").forEach(a => { a.hidden = !S.cfg.admin; }); if (S.cfg.admin) wireAdmin();   // the Platform page: administrators only
   const e = S.cfg.extractor, llm = e.llm && e.mode !== "rules";
   $("#engine").innerHTML = `Reading with ${llm ? `<b>${e.provider === "Gemini" ? "Google Gemini" : esc(e.provider || "Claude")}</b> (${esc(e.model)})` : "<b>built-in rules</b>"}${e.ocr ? " and OCR" : ""}<br>Dates checked as of ${esc(S.cfg.as_of)}`
     + (S.cfg.erp ? `<br>Connected to ${extLink(S.cfg.erp.home, "<b>Odoo</b>")} (${esc(S.cfg.erp.db)})` : "")

@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from . import auth, bill_sync, config, db, erp_api, erp_sync, export, extract, logs, odoo, odoo_trail, pipeline, rules
+from . import admin_api, auth, bill_sync, central_sync, config, db, erp_api, erp_sync, export, extract, logs, odoo, odoo_trail, pipeline, rules
 
 logs.setup()
 logger.info("extractor={} llm={} ocr={} logs={}", config.EXTRACTOR, "{} ({})".format(*extract.llm_provider()) if extract.llm_available() else False,
@@ -44,6 +44,7 @@ for _run_id, _path in db.purge_hidden():
 app = FastAPI(title="Invoice Flow", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(auth.router)
 app.include_router(erp_api.router)   # the Odoo ERP API (two-way sync), documented in app/erp_api.py
+app.include_router(admin_api.router)   # the platform view for administrators (ADMIN_ACCOUNTS), app/admin_api.py
 BUS = {}                     # run_id -> {events, done, t0}
 JOBS = queue.Queue()
 ALLOWED = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
@@ -147,6 +148,8 @@ threading.Thread(target=_worker, daemon=True).start()
 if odoo.enabled():   # phase 4: bills posted or paid in Odoo show here even with nobody on the Dashboard
     threading.Thread(target=odoo_trail.poll_forever, daemon=True).start()
     threading.Thread(target=erp_sync.loop, daemon=True).start()   # the two-way sync: queue, pulls, reconcile
+if central_sync.enabled():   # the whole platform's read-only copy in Odoo, for the administrator (CENTRAL_SYNC=1)
+    threading.Thread(target=central_sync.loop, daemon=True).start()
 
 
 def _resume_stuck_batches():
@@ -1054,7 +1057,7 @@ def cfg(user: dict = Depends(auth.current_user)):
                 extractor=dict(mode=config.EXTRACTOR, llm=extract.llm_available(), provider=extract.llm_provider()[0], model=extract.llm_provider()[1],
                                ocr=extract.ocr_available(), key_rejected=bool(extract.llm_key_problem()), key_problem=extract.llm_key_problem()),
                 stages=[dict(id=i, title=t) for i, t in pipeline.STAGES], erp=_erp_info(user["id"]),
-                erp_preview=_erp_preview(user))
+                erp_preview=_erp_preview(user), admin=central_sync.is_admin(user["username"]))
 
 
 def _erp_preview(user):
